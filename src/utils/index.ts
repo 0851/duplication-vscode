@@ -10,10 +10,13 @@ export async function read (filepath: string): Promise<string | undefined> {
     return undefined;
   }
 }
-export type WatchEventName = 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir';
+export type WatchEventName = 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir' | 'error';
 export type WatchUpdate = (filepath: string, eventName: WatchEventName, path: string, stats?: fs.Stats) => Promise<void> | void;
 export function watch (filepath: string, update: WatchUpdate) {
-  let watched = chokidar.watch(filepath).on('all', (eventName: WatchEventName, path: string, stats?: fs.Stats) => {
+  let watched = chokidar.watch(filepath, {
+    ignoreInitial: true,
+    followSymlinks: true
+  }).on('all', (eventName: WatchEventName, path: string, stats?: fs.Stats) => {
     update(filepath, eventName, path, stats);
   });
   return (): Promise<void> => {
