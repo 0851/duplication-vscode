@@ -1,0 +1,60 @@
+{
+	"name": "duplication-vscode",
+	"displayName": "duplication-vscode",
+	"description": "",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.47.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./dist/extension.js",
+	"contributes": {},
+	"scripts": {
+		"vscode:prepublish": "yarn run compile",
+		"lint": "eslint src --ext ts",
+		"compile": "webpack --mode production",
+		"watch": "webpack --mode development --watch --info-verbosity verbose",
+		"test": "mocha -r ts-node/register ./src/**/*.test.ts"
+	},
+	"dependencies": {
+		"chokidar": "^3.4.0"
+	},
+	"devDependencies": {
+		"@babel/parser": "^7.10.5",
+		"@babel/traverse": "^7.10.5",
+		"@types/babel__traverse": "^7.0.13",
+		"@types/glob": "^7.1.1",
+		"@types/lodash": "^4.14.157",
+		"@types/mocha": "^7.0.2",
+		"@types/node": "^13.13.15",
+		"@types/pify": "^3.0.2",
+		"@types/vscode": "^1.47.0",
+		"@typescript-eslint/eslint-plugin": "^2.30.0",
+		"@typescript-eslint/parser": "^2.30.0",
+		"eslint": "^6.8.0",
+		"eslint-loader": "^4.0.2",
+		"glob": "^7.1.6",
+		"lodash": "^4.17.19",
+		"mocha": "^7.1.2",
+		"pify": "^5.0.0",
+		"ts-loader": "^8.0.0",
+		"ts-node": "^8.10.2",
+		"typescript": "^3.8.3",
+		"vscode-test": "^1.3.0",
+		"webpack": "^4.43.0",
+		"webpack-cli": "^3.3.12"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/0851/duplication-vscode.git"
+	},
+	"bugs": {
+		"url": "https://github.com/0851/duplication-vscode/issues"
+	},
+	"homepage": "https://github.com/0851/duplication-vscode#readme"
+}
