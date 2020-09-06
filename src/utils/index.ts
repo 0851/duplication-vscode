@@ -1,11 +1,31 @@
 import * as fs from 'fs';
 import * as pify from 'pify';
 import * as chokidar from 'chokidar';
+import { Config } from './config';
+import { getFormatByFile } from '@jscpd/tokenizer';
 
-
-export async function read (filepath: string): Promise<string | undefined> {
+export interface File {
+  path: string
+  content: string
+  format: string
+  stats: fs.Stats
+}
+export async function read (filepath: string, config: Config): Promise<File | undefined> {
   try {
-    return await pify(fs.readFile)(filepath, 'utf-8');
+    let [stats, content] = await Promise.all([
+      pify(fs.stat)(filepath),
+      pify(fs.readFile)(filepath, 'utf-8')
+    ]);
+    const format: string | undefined = getFormatByFile(filepath, config.formatsExts);
+    if (format === undefined) {
+      return undefined;
+    }
+    return {
+      path: filepath,
+      content,
+      format,
+      stats
+    };
   } catch (error) {
     return undefined;
   }

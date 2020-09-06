@@ -1,32 +1,33 @@
 
-import { read, watch, WatchEventName, hasOwnProperty } from '.';
+import { read, watch, File, WatchEventName, hasOwnProperty } from '.';
 import * as fs from 'fs';
-import * as path from 'path';
-//fast glob TODO download
 import * as globby from 'globby';
+import * as bytes from 'bytes';
+import { Config } from './config';
 export interface FileItem {
   filepath: string,
   source: string,
+  format: string,
+  stats: fs.Stats,
   watched: () => Promise<void>
 }
+
 export interface FileData {
   [filepath: string]: FileItem
 }
 
 export class Files {
   datas: FileData;
-  ingore: string[];
-  root: string;
-  constructor (root: string, ingore: string[]) {
+  constructor (public root: string, public config: Config) {
     this.datas = {};
     this.root = root;
-    this.ingore = ingore;
+    this.config = config;
   }
   async exec (): Promise<FileData> {
     let paths = await globby(`${this.root}/**/*`, {
       dot: true,
       cwd: this.root,
-      ignore: this.ingore.map((i) => `${this.root}/${i}`),
+      ignore: this.config.ignore.map((i) => `${this.root}/${i}`),
       // ignore: this.ingore,
       absolute: true,
       onlyFiles: true,
@@ -87,16 +88,39 @@ export class Files {
     this.datas[filepath] = item;
     return item;
   }
+  skipBigFiles (entry: File): boolean {
+    const { stats, path } = entry;
+    const shouldSkip = bytes.parse(stats.size) > bytes.parse(this.config.maxSize);
+    if (this.config.debug && shouldSkip) {
+      console.log(`File ${path} skipped! Size more then limit (${bytes(stats.size)} > ${this.config.maxSize})`);
+    }
+    return shouldSkip;
+  }
+  skip (f: File) {
+    if (f.content === '') {
+      return true;
+    }
+    if (f.stats.isFile() !== true) {
+      return true;
+    }
+    if (this.skipBigFiles(f) === true) {
+      return true;
+    }
+    return false;
+  }
   async _read (filepath: string): Promise<FileItem | undefined> {
-    let str: string | undefined = undefined;
-    str = await read(filepath);
-    if (str === undefined) {
+    let f = await read(filepath, this.config);
+    if (f === undefined) {
       return;
     }
-    let s: string = str;
+    if (this.skip(f) === true) {
+      return;
+    }
     let item: FileItem = {
       filepath: filepath,
-      source: s,
+      source: f.content,
+      format: f.format,
+      stats: f.stats,
       watched: watch(filepath, (filepath: string, eventName: WatchEventName, path: string, stats?: fs.Stats) => {
         this.update(filepath, eventName, path, stats);
       })

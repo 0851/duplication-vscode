@@ -17,4 +17,30 @@ export class Config {
         'logs'
       ];
   }
+  get minTokens (): number {
+    return workspace.getConfiguration('duplication')
+      .get<number>('minTokens') || 50;
+  }
+  get maxLines (): number {
+    return workspace.getConfiguration('duplication')
+      .get<number>('maxLines') || 10000;
+  }
+  get minLines (): number {
+    return workspace.getConfiguration('duplication')
+      .get<number>('minLines') || 5;
+  }
+  get maxSize (): string {
+    return workspace.getConfiguration('duplication')
+      .get<string>('maxSize') || '100kb';
+  }
+  get debug (): boolean {
+    return workspace.getConfiguration('duplication')
+      .get<boolean>('debug') || false;
+  }
+  get formatsExts (): {
+    [key: string]: string[]
+  } | {} {
+    return workspace.getConfiguration('duplication')
+      .get<boolean>('formatsExts') || {};
+  }
 }
