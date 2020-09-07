@@ -3,6 +3,7 @@
 	"displayName": "duplication-vscode",
 	"description": "检查重复代码",
 	"version": "0.0.1",
+	"publisher": "0851",
 	"engines": {
 		"vscode": "^1.47.0"
 	},
