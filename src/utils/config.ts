@@ -1,4 +1,4 @@
-import { workspace } from 'vscode';
+import { workspace, DiagnosticSeverity } from 'vscode';
 export class Config {
   get root (): string | undefined {
     return (workspace.workspaceFolders || [])[0]?.uri?.path;
@@ -39,6 +39,10 @@ export class Config {
   get debug (): boolean {
     return workspace.getConfiguration('duplication')
       .get<boolean>('debug') || false;
+  }
+  get severity (): DiagnosticSeverity {
+    return workspace.getConfiguration('duplication')
+      .get<DiagnosticSeverity>('severity') || 1;
   }
   get formatsExts (): {
     [key: string]: string[]

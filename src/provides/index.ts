@@ -2,11 +2,14 @@ import { FileData } from '../utils/files';
 import {
   ExtensionContext, languages, Uri, Range,
   Diagnostic,
-  DiagnosticCollection
+  DiagnosticCollection,
+  DiagnosticRelatedInformation,
+  Location
 } from 'vscode';
 import { detectClones, getDuplication, IClone } from '../utils/clones';
 import { Config } from '../utils/config';
 import { debounce } from '../utils';
+export const CODE_ACTION = 'goto-duplication';
 
 
 export class Provider {
@@ -44,27 +47,23 @@ export class Provider {
     if (!clones) {
       clones = await detectClones(this.files, this.config);
     }
-    let errs = getDuplication(sourceId, [...clones]);
+    let errs = getDuplication(sourceId, clones);
+
     let diagnostics: Diagnostic[] = [];
     errs.forEach((err) => {
-      let source;
-      let other;
-      if (err.duplicationA.sourceId === sourceId) {
-        source = err.duplicationA;
-        other = err.duplicationB;
-      } else {
-        source = err.duplicationB;
-        other = err.duplicationA;
-      }
-      let range = new Range(source.start.line, source.range[0], source.end.line, source.range[1]);
-      let diagnostic = new Diagnostic(range, `${other.sourceId}:${source.start.line}-${source.end.line} duplication`, 1);
-      if (diagnostic) {
-        diagnostic.code = {
-          value: this.files[other.sourceId].content.slice(source.range[0], source.range[1]),
-          target: Uri.file(other.sourceId)
-        };
-        diagnostics.push(diagnostic);
-      }
+      let source = err.source;
+      let others = err.refs;
+      others.forEach((other) => {
+        let range = new Range(source.start.line, source.range[0], source.end.line, source.range[1]);
+        let otherRange = new Range(other.start.line, other.range[0], other.end.line, other.range[1]);
+        let diagnostic = new Diagnostic(range, `duplication`, this.config.severity);
+        if (diagnostic) {
+          diagnostic.code = CODE_ACTION;
+          let message = this.files[other.sourceId].content.slice(other.range[0], other.range[1]);
+          diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), message)];
+          diagnostics.push(diagnostic);
+        }
+      });
     });
     this.diagnosticCollection.set(uri, diagnostics);
   }

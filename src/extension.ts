@@ -2,12 +2,15 @@
 import {
   ExtensionContext, workspace,
   TextDocumentChangeEvent,
-  Uri
+  TextEditor,
+  window
 } from 'vscode';
 import { Files, FileData } from './utils/files';
 import { Config } from './utils/config';
 import { Provider } from './provides/index';
+import { QuickPick } from './provides/quickpick';
 import { debounce } from './utils';
+
 process.on('unhandledRejection', error => {
   // Will print "unhandledRejection err is not defined"
   console.log('unhandledRejection', error);
@@ -39,14 +42,28 @@ export async function activate (context: ExtensionContext) {
   if (!files) { return; };
   let provider = new Provider(context, files, config);
   provider.onChanges();
-  workspace.onDidChangeWorkspaceFolders(debounce(() => { onChange(f, provider, config); }));
-  workspace.onDidChangeConfiguration(debounce(() => { onChange(f, provider, config); }));
-  workspace.onDidChangeTextDocument(debounce((event: TextDocumentChangeEvent) => {
-    let fp = event.document.uri.path;
-    let content = event.document.getText();
-    f.put(fp, { content: content });
-    provider.onChange(fp);
-  }));
+  context.subscriptions.push(workspace.onDidChangeWorkspaceFolders(debounce(() => { onChange(f, provider, config); })));
+  context.subscriptions.push(workspace.onDidChangeConfiguration(debounce(() => { onChange(f, provider, config); })));
+  context.subscriptions.push(workspace.onDidChangeTextDocument(
+    debounce((event: TextDocumentChangeEvent) => {
+      let fp = event.document.uri.path;
+      let content = event.document.getText();
+      f.put(fp, { content: content });
+      provider.onChange(fp);
+    })
+  ));
+  context.subscriptions.push(window.onDidChangeActiveTextEditor(
+    debounce((editor: TextEditor | undefined) => {
+      if (!editor) {
+        return;
+      }
+      let fp = editor.document.uri.path;
+      let content = editor.document.getText();
+      f.put(fp, { content: content });
+      provider.onChange(fp);
+    })
+  ));
+  QuickPick(context, f, config);
 }
 
 export function deactivate () { }

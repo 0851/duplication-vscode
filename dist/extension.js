@@ -21451,6 +21451,7 @@ const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 const files_1 = __webpack_require__(/*! ./utils/files */ "./src/utils/files.ts");
 const config_1 = __webpack_require__(/*! ./utils/config */ "./src/utils/config.ts");
 const index_1 = __webpack_require__(/*! ./provides/index */ "./src/provides/index.ts");
+const quickpick_1 = __webpack_require__(/*! ./provides/quickpick */ "./src/provides/quickpick.ts");
 const utils_1 = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
 process.on('unhandledRejection', error => {
     // Will print "unhandledRejection err is not defined"
@@ -21491,14 +21492,24 @@ function activate(context) {
         ;
         let provider = new index_1.Provider(context, files, config);
         provider.onChanges();
-        vscode_1.workspace.onDidChangeWorkspaceFolders(utils_1.debounce(() => { onChange(f, provider, config); }));
-        vscode_1.workspace.onDidChangeConfiguration(utils_1.debounce(() => { onChange(f, provider, config); }));
-        vscode_1.workspace.onDidChangeTextDocument(utils_1.debounce((event) => {
+        context.subscriptions.push(vscode_1.workspace.onDidChangeWorkspaceFolders(utils_1.debounce(() => { onChange(f, provider, config); })));
+        context.subscriptions.push(vscode_1.workspace.onDidChangeConfiguration(utils_1.debounce(() => { onChange(f, provider, config); })));
+        context.subscriptions.push(vscode_1.workspace.onDidChangeTextDocument(utils_1.debounce((event) => {
             let fp = event.document.uri.path;
             let content = event.document.getText();
             f.put(fp, { content: content });
             provider.onChange(fp);
-        }));
+        })));
+        context.subscriptions.push(vscode_1.window.onDidChangeActiveTextEditor(utils_1.debounce((editor) => {
+            if (!editor) {
+                return;
+            }
+            let fp = editor.document.uri.path;
+            let content = editor.document.getText();
+            f.put(fp, { content: content });
+            provider.onChange(fp);
+        })));
+        quickpick_1.QuickPick(context, f, config);
     });
 }
 exports.activate = activate;
@@ -21527,10 +21538,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Provider = void 0;
+exports.Provider = exports.CODE_ACTION = void 0;
 const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 const clones_1 = __webpack_require__(/*! ../utils/clones */ "./src/utils/clones.ts");
 const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils/index.ts");
+exports.CODE_ACTION = 'goto-duplication';
 class Provider {
     constructor(context, files, config) {
         this.context = context;
@@ -21569,28 +21581,22 @@ class Provider {
             if (!clones) {
                 clones = yield clones_1.detectClones(this.files, this.config);
             }
-            let errs = clones_1.getDuplication(sourceId, [...clones]);
+            let errs = clones_1.getDuplication(sourceId, clones);
             let diagnostics = [];
             errs.forEach((err) => {
-                let source;
-                let other;
-                if (err.duplicationA.sourceId === sourceId) {
-                    source = err.duplicationA;
-                    other = err.duplicationB;
-                }
-                else {
-                    source = err.duplicationB;
-                    other = err.duplicationA;
-                }
-                let range = new vscode_1.Range(source.start.line, source.range[0], source.end.line, source.range[1]);
-                let diagnostic = new vscode_1.Diagnostic(range, `${other.sourceId}:${source.start.line}-${source.end.line} duplication`, 1);
-                if (diagnostic) {
-                    diagnostic.code = {
-                        value: this.files[other.sourceId].content.slice(source.range[0], source.range[1]),
-                        target: vscode_1.Uri.file(other.sourceId)
-                    };
-                    diagnostics.push(diagnostic);
-                }
+                let source = err.source;
+                let others = err.refs;
+                others.forEach((other) => {
+                    let range = new vscode_1.Range(source.start.line, source.range[0], source.end.line, source.range[1]);
+                    let otherRange = new vscode_1.Range(other.start.line, other.range[0], other.end.line, other.range[1]);
+                    let diagnostic = new vscode_1.Diagnostic(range, `duplication`, this.config.severity);
+                    if (diagnostic) {
+                        diagnostic.code = exports.CODE_ACTION;
+                        let message = this.files[other.sourceId].content.slice(other.range[0], other.range[1]);
+                        diagnostic.relatedInformation = [new vscode_1.DiagnosticRelatedInformation(new vscode_1.Location(vscode_1.Uri.parse(other.sourceId), otherRange), message)];
+                        diagnostics.push(diagnostic);
+                    }
+                });
             });
             this.diagnosticCollection.set(uri, diagnostics);
         });
@@ -21605,6 +21611,84 @@ class Provider {
     }
 }
 exports.Provider = Provider;
+
+
+/***/ }),
+
+/***/ "./src/provides/quickpick.ts":
+/*!***********************************!*\
+  !*** ./src/provides/quickpick.ts ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.QuickPick = void 0;
+const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
+const clones_1 = __webpack_require__(/*! ../utils/clones */ "./src/utils/clones.ts");
+// const decoration = window.createTextEditorDecorationType({
+//   backgroundColor: "rgba(255,0.0.0.3)"
+// });
+// function setDecorationOptions (one: Duplications, two: Duplications): DecorationOptions[] {
+//   let hoverMessage = `Matchs ${two.source.sourceId}:${two.source.start.line}`;
+//   return [];
+// }
+// async function showDiff (a: Duplications[], b: string) {
+// let asource = a[0].source;
+// let auri = Uri.parse(asource.sourceId);
+// let buri = Uri.parse(b);
+// let [adocOpen, bdocOpen] = await Promise.all([workspace.openTextDocument(auri), workspace.openTextDocument(buri)]);
+// let [adoc, bdoc] = await Promise.all([window.showTextDocument(adocOpen, ViewColumn.One), window.showTextDocument(bdocOpen, ViewColumn.Two)]);
+// let arange = new Range(a.source.start.line, a.source.range[0], a.source.end.line, a.source.range[1]);
+// let brange = new Range(b.source.start.line, b.source.range[0], b.source.end.line, b.source.range[1]);
+// adoc.setDecorations(decoration, setDecorationOptions(a, b));
+// bdoc.setDecorations(decoration, setDecorationOptions(b, a));
+// adoc.revealRange(arange);
+// bdoc.revealRange(brange);
+// }
+function QuickPick(context, f, config) {
+    context.subscriptions.push(vscode_1.commands.registerCommand('extension.duplication', () => __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        let clones = yield clones_1.detectClones(f.datas, config);
+        let sets = new Set();
+        clones.forEach((item) => {
+            let keys = [
+                item.duplicationA.sourceId,
+                item.duplicationB.sourceId
+            ];
+            keys.sort();
+            sets.add({
+                label: keys.map(key => key.replace(`${config.root}/` || '', '')).join(` <=> `),
+                description: keys.join(` <=> `)
+            });
+        });
+        let find = yield vscode_1.window.showQuickPick([...sets]);
+        if (!find) {
+            return;
+        }
+        let keys = (_a = find.description) === null || _a === void 0 ? void 0 : _a.split(' <=> ');
+        if (!keys) {
+            return;
+        }
+        let ak = keys[0];
+        let bk = keys[1];
+        vscode_1.commands.executeCommand('vscode.diff', vscode_1.Uri.parse(ak), vscode_1.Uri.parse(bk), find.label);
+        // let a = getDuplication(ak, clones);
+        // showDiff(a, bk);
+    })));
+}
+exports.QuickPick = QuickPick;
 
 
 /***/ }),
@@ -21628,7 +21712,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.detectClones = exports.getDuplication = void 0;
+exports.detectClones = exports.getDuplication = exports.filterDuplication = exports.getDuplicationItem = void 0;
 const core_1 = __webpack_require__(/*! @jscpd/core */ "./node_modules/@jscpd/core/dist/index.js");
 const tokenizer_1 = __webpack_require__(/*! @jscpd/tokenizer */ "./node_modules/@jscpd/tokenizer/dist/index.js");
 function getItems(datas) {
@@ -21654,32 +21738,68 @@ function detectOne(detector, item) {
 function exec(files, detector) {
     return __awaiter(this, void 0, void 0, function* () {
         let clones = [];
-        let stack = [...files];
-        while (stack.length) {
-            let item = stack.shift();
-            if (!item) {
-                break;
-            }
+        for (let index = 0; index < files.length; index++) {
+            const item = files[index];
             let clone = yield detectOne(detector, item);
             clones.push(...clone);
         }
         return clones;
     });
 }
-// 计算重复有点问题
-function getDuplication(f, clones) {
-    let dups = [];
-    let stack = [...clones];
-    while (stack.length) {
-        let clone = stack.shift();
-        if (!clone) {
-            break;
+function getDuplicationKeyKey(obj) {
+    return `${obj.sourceId}-${obj.range[0]}-${obj.range[1]}`;
+}
+function duplicationKey(clone) {
+    return {
+        keyA: getDuplicationKeyKey(clone.duplicationA),
+        keyB: getDuplicationKeyKey(clone.duplicationB)
+    };
+}
+function getDuplicationItem(clone, clones) {
+    let res = [];
+    let keys = [duplicationKey(clone).keyA, duplicationKey(clone).keyB];
+    for (let index = 0; index < clones.length; index++) {
+        const element = clones[index];
+        let key = duplicationKey(element);
+        if (keys.includes(key.keyA)) {
+            res.push(element.duplicationB);
         }
-        if (clone.duplicationA.sourceId === f || clone.duplicationB.sourceId === f) {
-            dups.push(clone);
+        if (keys.includes(key.keyB)) {
+            res.push(element.duplicationA);
         }
     }
-    return dups;
+    return res;
+}
+exports.getDuplicationItem = getDuplicationItem;
+function filterDuplication(dup, dups) {
+    return dups.filter((item) => {
+        let sKey = getDuplicationKeyKey(item);
+        let key = getDuplicationKeyKey(dup);
+        return sKey !== key;
+    });
+}
+exports.filterDuplication = filterDuplication;
+function getDuplication(f, clones) {
+    let dups = [];
+    for (let index = 0; index < clones.length; index++) {
+        const clone = clones[index];
+        let refs = getDuplicationItem(clone, clones);
+        dups.push({
+            source: clone.duplicationA,
+            refs: filterDuplication(clone.duplicationA, refs),
+            format: clone.format,
+            foundDate: clone.foundDate
+        });
+        dups.push({
+            source: clone.duplicationB,
+            refs: filterDuplication(clone.duplicationB, refs),
+            format: clone.format,
+            foundDate: clone.foundDate
+        });
+    }
+    return dups.filter((dup) => {
+        return dup.source.sourceId === f;
+    });
 }
 exports.getDuplication = getDuplication;
 function detectClones(datas, config) {
@@ -21759,6 +21879,10 @@ class Config {
     get debug() {
         return vscode_1.workspace.getConfiguration('duplication')
             .get('debug') || false;
+    }
+    get severity() {
+        return vscode_1.workspace.getConfiguration('duplication')
+            .get('severity') || 1;
     }
     get formatsExts() {
         return vscode_1.workspace.getConfiguration('duplication')

@@ -13,7 +13,14 @@
 		"onStartupFinished"
 	],
 	"main": "./dist/extension.js",
-	"contributes": {},
+	"contributes": {
+		"commands": [
+			{
+				"command": "extension.duplication",
+				"title": "Show Duplication"
+			}
+		]
+	},
 	"scripts": {
 		"vscode:prepublish": "yarn run compile",
 		"lint": "eslint src --ext ts",
