@@ -4,8 +4,8 @@ export class Config {
     return (workspace.workspaceFolders || [])[0]?.uri?.path;
   }
   get ignore (): string[] {
-    return workspace.getConfiguration('duplication')
-      .get<string[]>('ignore') || [
+    return workspace.getConfiguration()
+      .get<string[]>('duplication.ignore') || [
         'node_modules/**/*',
         'bower_components',
         'jspm_packages',

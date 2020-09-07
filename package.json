@@ -18,6 +18,28 @@
 			{
 				"title": "Duplication Configuration",
 				"properties": {
+					"duplication.ignore": {
+						"type": "array",
+						"default": [
+							"node_modules/**/*",
+							"bower_components",
+							"jspm_packages",
+							"web_modules",
+							".cache",
+							".history",
+							".yarn/cache",
+							".vscode-test",
+							"out",
+							"dist",
+							"build",
+							"logs"
+						],
+						"items": {
+							"type": "string"
+						},
+						"description": "忽略文件列表",
+						"scope": "window"
+					},
 					"duplication.minTokens": {
 						"type": "number",
 						"default": 50,
@@ -61,6 +83,12 @@
 					},
 					"duplication.formatsExts": {
 						"type": "object",
+						"additionalProperties": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							}
+						},
 						"description": "附加格式 -> [key: string]: string[]",
 						"scope": "window"
 					}

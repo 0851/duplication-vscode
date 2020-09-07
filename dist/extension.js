@@ -21844,8 +21844,8 @@ class Config {
         return (_b = (_a = (vscode_1.workspace.workspaceFolders || [])[0]) === null || _a === void 0 ? void 0 : _a.uri) === null || _b === void 0 ? void 0 : _b.path;
     }
     get ignore() {
-        return vscode_1.workspace.getConfiguration('duplication')
-            .get('ignore') || [
+        return vscode_1.workspace.getConfiguration()
+            .get('duplication.ignore') || [
             'node_modules/**/*',
             'bower_components',
             'jspm_packages',
