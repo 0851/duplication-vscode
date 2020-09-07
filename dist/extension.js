@@ -21861,32 +21861,32 @@ class Config {
         ];
     }
     get minTokens() {
-        return vscode_1.workspace.getConfiguration('duplication')
-            .get('minTokens') || 50;
+        return vscode_1.workspace.getConfiguration()
+            .get('duplication.minTokens') || 50;
     }
     get maxLines() {
-        return vscode_1.workspace.getConfiguration('duplication')
-            .get('maxLines') || 10000;
+        return vscode_1.workspace.getConfiguration()
+            .get('duplication.maxLines') || 10000;
     }
     get minLines() {
-        return vscode_1.workspace.getConfiguration('duplication')
-            .get('minLines') || 5;
+        return vscode_1.workspace.getConfiguration()
+            .get('duplication.minLines') || 5;
     }
     get maxSize() {
-        return vscode_1.workspace.getConfiguration('duplication')
-            .get('maxSize') || '100kb';
+        return vscode_1.workspace.getConfiguration()
+            .get('duplication.maxSize') || '100kb';
     }
     get debug() {
-        return vscode_1.workspace.getConfiguration('duplication')
-            .get('debug') || false;
+        return vscode_1.workspace.getConfiguration()
+            .get('duplication.debug') || false;
     }
     get severity() {
-        return vscode_1.workspace.getConfiguration('duplication')
-            .get('severity') || 1;
+        return vscode_1.workspace.getConfiguration()
+            .get('duplication.severity') || 1;
     }
     get formatsExts() {
-        return vscode_1.workspace.getConfiguration('duplication')
-            .get('formatsExts') || {};
+        return vscode_1.workspace.getConfiguration()
+            .get('duplication.formatsExts') || {};
     }
 }
 exports.Config = Config;

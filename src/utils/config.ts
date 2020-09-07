@@ -21,33 +21,33 @@ export class Config {
       ];
   }
   get minTokens (): number {
-    return workspace.getConfiguration('duplication')
-      .get<number>('minTokens') || 50;
+    return workspace.getConfiguration()
+      .get<number>('duplication.minTokens') || 50;
   }
   get maxLines (): number {
-    return workspace.getConfiguration('duplication')
-      .get<number>('maxLines') || 10000;
+    return workspace.getConfiguration()
+      .get<number>('duplication.maxLines') || 10000;
   }
   get minLines (): number {
-    return workspace.getConfiguration('duplication')
-      .get<number>('minLines') || 5;
+    return workspace.getConfiguration()
+      .get<number>('duplication.minLines') || 5;
   }
   get maxSize (): string {
-    return workspace.getConfiguration('duplication')
-      .get<string>('maxSize') || '100kb';
+    return workspace.getConfiguration()
+      .get<string>('duplication.maxSize') || '100kb';
   }
   get debug (): boolean {
-    return workspace.getConfiguration('duplication')
-      .get<boolean>('debug') || false;
+    return workspace.getConfiguration()
+      .get<boolean>('duplication.debug') || false;
   }
   get severity (): DiagnosticSeverity {
-    return workspace.getConfiguration('duplication')
-      .get<DiagnosticSeverity>('severity') || 1;
+    return workspace.getConfiguration()
+      .get<DiagnosticSeverity>('duplication.severity') || 1;
   }
   get formatsExts (): {
     [key: string]: string[]
   } | {} {
-    return workspace.getConfiguration('duplication')
-      .get<boolean>('formatsExts') || {};
+    return workspace.getConfiguration()
+      .get<boolean>('duplication.formatsExts') || {};
   }
 }
