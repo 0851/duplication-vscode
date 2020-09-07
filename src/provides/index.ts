@@ -59,8 +59,8 @@ export class Provider {
         let diagnostic = new Diagnostic(range, `duplication`, this.config.severity);
         if (diagnostic) {
           diagnostic.code = CODE_ACTION;
-          let message = this.files[other.sourceId].content.slice(other.range[0], other.range[1]);
-          diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), message)];
+          // let message = this.files[other.sourceId].content.slice(other.range[0], other.range[1]);
+          diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), '')];
           diagnostics.push(diagnostic);
         }
       });

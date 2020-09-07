@@ -1,7 +1,7 @@
 {
 	"name": "duplication-vscode",
 	"displayName": "duplication-vscode",
-	"description": "",
+	"description": "检查重复代码",
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.47.0"
@@ -109,6 +109,7 @@
 		"watch": "webpack --mode development --watch --info-verbosity verbose",
 		"test": "mocha -r ts-node/register ./src/**/*.test.ts"
 	},
+	"license": "MIT",
 	"dependencies": {
 		"chokidar": "^3.4.0"
 	},
