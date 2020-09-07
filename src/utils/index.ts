@@ -5,7 +5,7 @@ import { Config } from './config';
 import { getFormatByFile } from '@jscpd/tokenizer';
 
 export interface File {
-  path: string
+  filepath: string
   content: string
   format: string
   stats: fs.Stats
@@ -21,7 +21,7 @@ export async function read (filepath: string, config: Config): Promise<File | un
       return undefined;
     }
     return {
-      path: filepath,
+      filepath,
       content,
       format,
       stats
@@ -32,10 +32,11 @@ export async function read (filepath: string, config: Config): Promise<File | un
 }
 export type WatchEventName = 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir' | 'error';
 export type WatchUpdate = (filepath: string, eventName: WatchEventName, path: string, stats?: fs.Stats) => Promise<void> | void;
-export function watch (filepath: string, update: WatchUpdate) {
+export function watch (filepath: string, update: WatchUpdate, config: Config) {
   let watched = chokidar.watch(filepath, {
     ignoreInitial: true,
-    followSymlinks: true
+    followSymlinks: true,
+    ignored: config.ignore
   }).on('all', (eventName: WatchEventName, path: string, stats?: fs.Stats) => {
     update(filepath, eventName, path, stats);
   });
@@ -47,3 +48,16 @@ export function watch (filepath: string, update: WatchUpdate) {
 export function hasOwnProperty (o: any, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(o, key);
 }
+
+export function debounce<Params extends any[]> (fn: (...args: Params) => any, n?: number, immed?: boolean): (...args: Params) => any {
+  let timer: NodeJS.Timer | undefined = undefined;
+  return function (this: any, ...args: Params) {
+    if (timer === undefined && immed === true) {
+      fn.apply(this, args);
+    }
+    timer && clearTimeout(timer);
+    n = n || 100;
+    timer = setTimeout(() => fn.apply(this, args), n);
+    return timer;
+  };
+};

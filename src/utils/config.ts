@@ -1,5 +1,8 @@
 import { workspace } from 'vscode';
 export class Config {
+  get root (): string | undefined {
+    return (workspace.workspaceFolders || [])[0]?.uri?.path;
+  }
   get ignore (): string[] {
     return workspace.getConfiguration('duplication')
       .get<string[]>('ignore') || [

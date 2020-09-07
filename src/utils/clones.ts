@@ -12,7 +12,9 @@ import {
 import { Tokenizer } from '@jscpd/tokenizer';
 import { FileData } from './files';
 import { Config } from './config';
-import { read, File } from '.';
+import { File } from '.';
+
+export { IClone };
 
 interface Duplication {
   sourceId: string;
@@ -27,12 +29,7 @@ interface Duplication {
 function getItems (datas: FileData): File[] {
   return Object.keys(datas).reduce((res: File[], next: string) => {
     let item = datas[next];
-    res.push({
-      path: item.filepath,
-      content: item.source,
-      format: item.format,
-      stats: item.stats
-    });
+    res.push(item);
     return res;
   }, []);
 }
@@ -41,14 +38,14 @@ async function detectOne (detector: Detector, item: File): Promise<IClone[]> {
     if (!item) {
       return [];
     }
-    return await detector.detect(item.path, item.content, item.format);
+    return await detector.detect(item.filepath, item.content, item.format);
   } catch (error) {
     return [];
   }
 }
-async function exec (stack: File[], detector: Detector): Promise<Duplication[]> {
+async function exec (files: File[], detector: Detector): Promise<IClone[]> {
   let clones = [];
-  let f = stack[0];
+  let stack = [...files];
   while (stack.length) {
     let item = stack.shift();
     if (!item) {
@@ -57,40 +54,26 @@ async function exec (stack: File[], detector: Detector): Promise<Duplication[]> 
     let clone = await detectOne(detector, item);
     clones.push(...clone);
   }
-  return getDuplication(f, clones);
+  return clones;
 }
-function getDuplication (f: File, clones: IClone[]): Duplication[] {
-  let dups: Duplication[] = [];
-  while (clones.length) {
-    let clone = clones.shift();
+// 计算重复有点问题
+export function getDuplication (f: string, clones: IClone[]): IClone[] {
+  let dups: IClone[] = [];
+  let stack = [...clones];
+  while (stack.length) {
+    let clone = stack.shift();
     if (!clone) {
       break;
     }
-    if (clone.duplicationA.sourceId === f.path && clone.duplicationB.sourceId !== f.path) {
-      dups.push({
-        ...clone.duplicationB,
-        format: clone.format,
-        foundDate: clone.foundDate
-      });
-    }
-    if (clone.duplicationB.sourceId === f.path && clone.duplicationA.sourceId !== f.path) {
-      dups.push({
-        ...clone.duplicationA,
-        format: clone.format,
-        foundDate: clone.foundDate
-      });
+    if (clone.duplicationA.sourceId === f || clone.duplicationB.sourceId === f) {
+      dups.push(clone);
     }
   }
   return dups;
 }
-export async function detectClones (f: string, datas: FileData, config: Config): Promise<Duplication[]> {
+export async function detectClones (datas: FileData, config: Config): Promise<IClone[]> {
   try {
     let stack = getItems(datas);
-    let item = await read(f, config);
-    if (!item) {
-      return [];
-    }
-    stack.unshift(item);
     const tokenizer: ITokenizer = new Tokenizer();
     const validators: ICloneValidator[] = [];
     const store: IStore<IMapFrame> = new MemoryStore();

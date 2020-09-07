@@ -87,6 +87,512 @@ module.exports =
 /************************************************************************/
 /******/ ({
 
+/***/ "./node_modules/@jscpd/core/dist/detector.js":
+/*!***************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/detector.js ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const rabin_karp_1 = __webpack_require__(/*! ./rabin-karp */ "./node_modules/@jscpd/core/dist/rabin-karp.js");
+const validators_1 = __webpack_require__(/*! ./validators */ "./node_modules/@jscpd/core/dist/validators/index.js");
+const mode_1 = __webpack_require__(/*! ./mode */ "./node_modules/@jscpd/core/dist/mode.js");
+// TODO replace to own event emitter
+const EventEmitter = __webpack_require__(/*! eventemitter3 */ "./node_modules/eventemitter3/index.js");
+class Detector extends EventEmitter {
+    constructor(tokenizer, store, cloneValidators = [], options) {
+        super();
+        this.tokenizer = tokenizer;
+        this.store = store;
+        this.cloneValidators = cloneValidators;
+        this.options = options;
+        this.initCloneValidators();
+        this.algorithm = new rabin_karp_1.RabinKarp(this.options, this, this.cloneValidators);
+        this.options.minTokens = this.options.minTokens || 50;
+        this.options.maxLines = this.options.maxLines || 500;
+        this.options.minLines = this.options.minLines || 5;
+        this.options.mode = this.options.mode || mode_1.mild;
+    }
+    detect(id, text, format) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const tokenMaps = this.tokenizer.generateMaps(id, text, format, this.options);
+            // TODO change stores implementation
+            this.store.namespace(format);
+            const detect = (tokenMap, clones) => __awaiter(this, void 0, void 0, function* () {
+                if (tokenMap) {
+                    this.emit('START_DETECTION', { source: tokenMap });
+                    return this.algorithm
+                        .run(tokenMap, this.store)
+                        .then((clns) => {
+                        clones.push(...clns);
+                        const nextTokenMap = tokenMaps.pop();
+                        if (nextTokenMap) {
+                            return detect(nextTokenMap, clones);
+                        }
+                        else {
+                            return clones;
+                        }
+                    });
+                }
+            });
+            return detect(tokenMaps.pop(), []);
+        });
+    }
+    initCloneValidators() {
+        if (this.options.minLines || this.options.maxLines) {
+            this.cloneValidators.push(new validators_1.LinesLengthCloneValidator());
+        }
+    }
+}
+exports.Detector = Detector;
+//# sourceMappingURL=detector.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/index.js":
+/*!************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/index.js ***!
+  \************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(/*! ./detector */ "./node_modules/@jscpd/core/dist/detector.js"));
+__export(__webpack_require__(/*! ./mode */ "./node_modules/@jscpd/core/dist/mode.js"));
+__export(__webpack_require__(/*! ./options */ "./node_modules/@jscpd/core/dist/options.js"));
+__export(__webpack_require__(/*! ./statistic */ "./node_modules/@jscpd/core/dist/statistic.js"));
+__export(__webpack_require__(/*! ./store/memory */ "./node_modules/@jscpd/core/dist/store/memory.js"));
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/mode.js":
+/*!***********************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/mode.js ***!
+  \***********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function strict(token) {
+    return token.type !== 'ignore';
+}
+exports.strict = strict;
+function mild(token) {
+    return strict(token) && token.type !== 'empty' && token.type !== 'new_line';
+}
+exports.mild = mild;
+function weak(token) {
+    return mild(token)
+        && token.format !== 'comment'
+        && token.type !== 'comment'
+        && token.type !== 'block-comment';
+}
+exports.weak = weak;
+const MODES = {
+    mild,
+    strict,
+    weak,
+};
+function getModeByName(name) {
+    if (name in MODES) {
+        return MODES[name];
+    }
+    throw new Error(`Mode ${name} does not supported yet.`);
+}
+exports.getModeByName = getModeByName;
+function getModeHandler(mode) {
+    return typeof mode === 'string' ? getModeByName(mode) : mode;
+}
+exports.getModeHandler = getModeHandler;
+//# sourceMappingURL=mode.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/options.js":
+/*!**************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/options.js ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const mode_1 = __webpack_require__(/*! ./mode */ "./node_modules/@jscpd/core/dist/mode.js");
+function getDefaultOptions() {
+    return {
+        executionId: new Date().toISOString(),
+        path: [process.cwd()],
+        mode: mode_1.getModeHandler('mild'),
+        minLines: 5,
+        maxLines: 1000,
+        maxSize: '100kb',
+        minTokens: 50,
+        output: './report',
+        reporters: ['console'],
+        ignore: [],
+        threshold: undefined,
+        formatsExts: {},
+        debug: false,
+        silent: false,
+        blame: false,
+        cache: true,
+        absolute: false,
+        noSymlinks: false,
+        skipLocal: false,
+        ignoreCase: false,
+        gitignore: false,
+        reportersOptions: {},
+    };
+}
+exports.getDefaultOptions = getDefaultOptions;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getOption(name, options) {
+    const defaultOptions = getDefaultOptions();
+    return options ? options[name] || defaultOptions[name] : defaultOptions[name];
+}
+exports.getOption = getOption;
+//# sourceMappingURL=options.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/rabin-karp.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/rabin-karp.js ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const validators_1 = __webpack_require__(/*! ./validators */ "./node_modules/@jscpd/core/dist/validators/index.js");
+class RabinKarp {
+    constructor(options, eventEmitter, cloneValidators) {
+        this.options = options;
+        this.eventEmitter = eventEmitter;
+        this.cloneValidators = cloneValidators;
+    }
+    run(tokenMap, store) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve => {
+                let mapFrameInStore;
+                let clone = null;
+                const clones = [];
+                // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+                const loop = () => {
+                    const iteration = tokenMap.next();
+                    store
+                        .get(iteration.value.id)
+                        .then((mapFrameFromStore) => {
+                        mapFrameInStore = mapFrameFromStore;
+                        if (!clone) {
+                            clone = RabinKarp.createClone(tokenMap.getFormat(), iteration.value, mapFrameInStore);
+                        }
+                    }, () => {
+                        if (clone && this.validate(clone)) {
+                            clones.push(clone);
+                        }
+                        clone = null;
+                        if (iteration.value.id) {
+                            return store.set(iteration.value.id, iteration.value);
+                        }
+                    })
+                        .finally(() => {
+                        if (!iteration.done) {
+                            if (clone) {
+                                clone = RabinKarp.enlargeClone(clone, iteration.value, mapFrameInStore);
+                            }
+                            loop();
+                        }
+                        else {
+                            resolve(clones);
+                        }
+                    });
+                };
+                loop();
+            }));
+        });
+    }
+    validate(clone) {
+        const validation = validators_1.runCloneValidators(clone, this.options, this.cloneValidators);
+        if (validation.status) {
+            this.eventEmitter.emit('CLONE_FOUND', { clone });
+        }
+        else {
+            this.eventEmitter.emit('CLONE_SKIPPED', { clone, validation });
+        }
+        return validation.status;
+    }
+    static createClone(format, mapFrameA, mapFrameB) {
+        return {
+            format,
+            foundDate: new Date().getTime(),
+            duplicationA: {
+                sourceId: mapFrameA.sourceId,
+                start: mapFrameA.start.loc.start,
+                end: mapFrameA.end.loc.end,
+                range: [mapFrameA.start.range[0], mapFrameA.end.range[1]],
+            },
+            duplicationB: {
+                sourceId: mapFrameB.sourceId,
+                start: mapFrameB.start.loc.start,
+                end: mapFrameB.end.loc.end,
+                range: [mapFrameB.start.range[0], mapFrameB.end.range[1]],
+            },
+        };
+    }
+    static enlargeClone(clone, mapFrameA, mapFrameB) {
+        clone.duplicationA.range[1] = mapFrameA.end.range[1];
+        clone.duplicationA.end = mapFrameA.end.loc.end;
+        clone.duplicationB.range[1] = mapFrameB.end.range[1];
+        clone.duplicationB.end = mapFrameB.end.loc.end;
+        return clone;
+    }
+}
+exports.RabinKarp = RabinKarp;
+//# sourceMappingURL=rabin-karp.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/statistic.js":
+/*!****************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/statistic.js ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+class Statistic {
+    constructor(options) {
+        this.options = options;
+        this.statistic = {
+            detectionDate: new Date().toISOString(),
+            formats: {},
+            total: Statistic.getDefaultStatistic(),
+        };
+    }
+    static getDefaultStatistic() {
+        return {
+            lines: 0,
+            tokens: 0,
+            sources: 0,
+            clones: 0,
+            duplicatedLines: 0,
+            duplicatedTokens: 0,
+            percentage: 0,
+            percentageTokens: 0,
+            newDuplicatedLines: 0,
+            newClones: 0,
+        };
+    }
+    subscribe() {
+        return {
+            CLONE_FOUND: this.cloneFound.bind(this),
+            START_DETECTION: this.matchSource.bind(this),
+        };
+    }
+    getStatistic() {
+        return this.statistic;
+    }
+    cloneFound(payload) {
+        const { clone } = payload;
+        const id = clone.duplicationA.sourceId;
+        const id2 = clone.duplicationB.sourceId;
+        const linesCount = clone.duplicationA.end.line - clone.duplicationA.start.line;
+        const duplicatedTokens = clone.duplicationA.end.position - clone.duplicationA.start.position;
+        this.statistic.total.clones++;
+        this.statistic.total.duplicatedLines += linesCount;
+        this.statistic.total.duplicatedTokens += duplicatedTokens;
+        this.statistic.formats[clone.format].total.clones++;
+        this.statistic.formats[clone.format].total.duplicatedLines += linesCount;
+        this.statistic.formats[clone.format].total.duplicatedTokens += duplicatedTokens;
+        this.statistic.formats[clone.format].sources[id].clones++;
+        this.statistic.formats[clone.format].sources[id].duplicatedLines += linesCount;
+        this.statistic.formats[clone.format].sources[id].duplicatedTokens += duplicatedTokens;
+        this.statistic.formats[clone.format].sources[id2].clones++;
+        this.statistic.formats[clone.format].sources[id2].duplicatedLines += linesCount;
+        this.statistic.formats[clone.format].sources[id2].duplicatedTokens += duplicatedTokens;
+        this.updatePercentage(clone.format);
+    }
+    matchSource(payload) {
+        const { source } = payload;
+        const format = source.getFormat();
+        if (!(format in this.statistic.formats)) {
+            this.statistic.formats[format] = {
+                sources: {},
+                total: Statistic.getDefaultStatistic(),
+            };
+        }
+        this.statistic.total.sources++;
+        this.statistic.total.lines += source.getLinesCount();
+        this.statistic.total.tokens += source.getTokensCount();
+        this.statistic.formats[format].total.sources++;
+        this.statistic.formats[format].total.lines += source.getLinesCount();
+        this.statistic.formats[format].total.tokens += source.getTokensCount();
+        this.statistic.formats[format].sources[source.getId()] =
+            this.statistic.formats[format].sources[source.getId()] || Statistic.getDefaultStatistic();
+        this.statistic.formats[format].sources[source.getId()].sources = 1;
+        this.statistic.formats[format].sources[source.getId()].lines += source.getLinesCount();
+        this.statistic.formats[format].sources[source.getId()].tokens += source.getTokensCount();
+        this.updatePercentage(format);
+    }
+    updatePercentage(format) {
+        this.statistic.total.percentage = Statistic.calculatePercentage(this.statistic.total.lines, this.statistic.total.duplicatedLines);
+        this.statistic.total.percentageTokens = Statistic.calculatePercentage(this.statistic.total.tokens, this.statistic.total.duplicatedTokens);
+        this.statistic.formats[format].total.percentage = Statistic.calculatePercentage(this.statistic.formats[format].total.lines, this.statistic.formats[format].total.duplicatedLines);
+        this.statistic.formats[format].total.percentageTokens = Statistic.calculatePercentage(this.statistic.formats[format].total.tokens, this.statistic.formats[format].total.duplicatedTokens);
+        Object.entries(this.statistic.formats[format].sources).forEach(([id, stat]) => {
+            this.statistic.formats[format].sources[id].percentage = Statistic.calculatePercentage(stat.lines, stat.duplicatedLines);
+            this.statistic.formats[format].sources[id].percentageTokens = Statistic.calculatePercentage(stat.tokens, stat.duplicatedTokens);
+        });
+    }
+    static calculatePercentage(total, cloned) {
+        return total ? Math.round((10000 * cloned) / total) / 100 : 0.0;
+    }
+}
+exports.Statistic = Statistic;
+//# sourceMappingURL=statistic.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/store/memory.js":
+/*!*******************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/store/memory.js ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+class MemoryStore {
+    constructor() {
+        this.values = {};
+    }
+    namespace(namespace) {
+        this._namespace = namespace;
+        this.values[namespace] = this.values[namespace] || {};
+    }
+    get(key) {
+        return new Promise((resolve, reject) => {
+            if (key in this.values[this._namespace]) {
+                resolve(this.values[this._namespace][key]);
+            }
+            else {
+                reject(new Error('not found'));
+            }
+        });
+    }
+    set(key, value) {
+        this.values[this._namespace][key] = value;
+        return Promise.resolve(value);
+    }
+    close() {
+        this.values = {};
+    }
+}
+exports.MemoryStore = MemoryStore;
+//# sourceMappingURL=memory.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/validators/index.js":
+/*!***********************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/validators/index.js ***!
+  \***********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(/*! ./lines-length-clone.validator */ "./node_modules/@jscpd/core/dist/validators/lines-length-clone.validator.js"));
+__export(__webpack_require__(/*! ./validator */ "./node_modules/@jscpd/core/dist/validators/validator.js"));
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/validators/lines-length-clone.validator.js":
+/*!**********************************************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/validators/lines-length-clone.validator.js ***!
+  \**********************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+class LinesLengthCloneValidator {
+    validate(clone, options) {
+        const lines = clone.duplicationA.end.line - clone.duplicationA.start.line;
+        const status = lines >= options.minLines;
+        return {
+            status,
+            message: status ? ['ok'] : [`Lines of code less then limit (${lines} < ${options.minLines})`],
+        };
+    }
+}
+exports.LinesLengthCloneValidator = LinesLengthCloneValidator;
+//# sourceMappingURL=lines-length-clone.validator.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@jscpd/core/dist/validators/validator.js":
+/*!***************************************************************!*\
+  !*** ./node_modules/@jscpd/core/dist/validators/validator.js ***!
+  \***************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function runCloneValidators(clone, options, validators) {
+    return validators.reduce((acc, validator) => {
+        const res = validator.validate(clone, options);
+        return Object.assign(Object.assign({}, acc), { status: res.status && acc.status, message: res.message ? [...acc.message, ...res.message] : acc.message });
+    }, { status: true, message: [], clone });
+}
+exports.runCloneValidators = runCloneValidators;
+//# sourceMappingURL=validator.js.map
+
+/***/ }),
+
 /***/ "./node_modules/@jscpd/tokenizer/dist/formats.js":
 /*!*******************************************************!*\
   !*** ./node_modules/@jscpd/tokenizer/dist/formats.js ***!
@@ -3274,6 +3780,354 @@ module.exports.sync = (input, options) => {
 
 /***/ }),
 
+/***/ "./node_modules/eventemitter3/index.js":
+/*!*********************************************!*\
+  !*** ./node_modules/eventemitter3/index.js ***!
+  \*********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var has = Object.prototype.hasOwnProperty
+  , prefix = '~';
+
+/**
+ * Constructor to create a storage for our `EE` objects.
+ * An `Events` instance is a plain object whose properties are event names.
+ *
+ * @constructor
+ * @private
+ */
+function Events() {}
+
+//
+// We try to not inherit from `Object.prototype`. In some engines creating an
+// instance in this way is faster than calling `Object.create(null)` directly.
+// If `Object.create(null)` is not supported we prefix the event names with a
+// character to make sure that the built-in object properties are not
+// overridden or used as an attack vector.
+//
+if (Object.create) {
+  Events.prototype = Object.create(null);
+
+  //
+  // This hack is needed because the `__proto__` property is still inherited in
+  // some old browsers like Android 4, iPhone 5.1, Opera 11 and Safari 5.
+  //
+  if (!new Events().__proto__) prefix = false;
+}
+
+/**
+ * Representation of a single event listener.
+ *
+ * @param {Function} fn The listener function.
+ * @param {*} context The context to invoke the listener with.
+ * @param {Boolean} [once=false] Specify if the listener is a one-time listener.
+ * @constructor
+ * @private
+ */
+function EE(fn, context, once) {
+  this.fn = fn;
+  this.context = context;
+  this.once = once || false;
+}
+
+/**
+ * Add a listener for a given event.
+ *
+ * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
+ * @param {(String|Symbol)} event The event name.
+ * @param {Function} fn The listener function.
+ * @param {*} context The context to invoke the listener with.
+ * @param {Boolean} once Specify if the listener is a one-time listener.
+ * @returns {EventEmitter}
+ * @private
+ */
+function addListener(emitter, event, fn, context, once) {
+  if (typeof fn !== 'function') {
+    throw new TypeError('The listener must be a function');
+  }
+
+  var listener = new EE(fn, context || emitter, once)
+    , evt = prefix ? prefix + event : event;
+
+  if (!emitter._events[evt]) emitter._events[evt] = listener, emitter._eventsCount++;
+  else if (!emitter._events[evt].fn) emitter._events[evt].push(listener);
+  else emitter._events[evt] = [emitter._events[evt], listener];
+
+  return emitter;
+}
+
+/**
+ * Clear event by name.
+ *
+ * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
+ * @param {(String|Symbol)} evt The Event name.
+ * @private
+ */
+function clearEvent(emitter, evt) {
+  if (--emitter._eventsCount === 0) emitter._events = new Events();
+  else delete emitter._events[evt];
+}
+
+/**
+ * Minimal `EventEmitter` interface that is molded against the Node.js
+ * `EventEmitter` interface.
+ *
+ * @constructor
+ * @public
+ */
+function EventEmitter() {
+  this._events = new Events();
+  this._eventsCount = 0;
+}
+
+/**
+ * Return an array listing the events for which the emitter has registered
+ * listeners.
+ *
+ * @returns {Array}
+ * @public
+ */
+EventEmitter.prototype.eventNames = function eventNames() {
+  var names = []
+    , events
+    , name;
+
+  if (this._eventsCount === 0) return names;
+
+  for (name in (events = this._events)) {
+    if (has.call(events, name)) names.push(prefix ? name.slice(1) : name);
+  }
+
+  if (Object.getOwnPropertySymbols) {
+    return names.concat(Object.getOwnPropertySymbols(events));
+  }
+
+  return names;
+};
+
+/**
+ * Return the listeners registered for a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @returns {Array} The registered listeners.
+ * @public
+ */
+EventEmitter.prototype.listeners = function listeners(event) {
+  var evt = prefix ? prefix + event : event
+    , handlers = this._events[evt];
+
+  if (!handlers) return [];
+  if (handlers.fn) return [handlers.fn];
+
+  for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
+    ee[i] = handlers[i].fn;
+  }
+
+  return ee;
+};
+
+/**
+ * Return the number of listeners listening to a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @returns {Number} The number of listeners.
+ * @public
+ */
+EventEmitter.prototype.listenerCount = function listenerCount(event) {
+  var evt = prefix ? prefix + event : event
+    , listeners = this._events[evt];
+
+  if (!listeners) return 0;
+  if (listeners.fn) return 1;
+  return listeners.length;
+};
+
+/**
+ * Calls each of the listeners registered for a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @returns {Boolean} `true` if the event had listeners, else `false`.
+ * @public
+ */
+EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
+  var evt = prefix ? prefix + event : event;
+
+  if (!this._events[evt]) return false;
+
+  var listeners = this._events[evt]
+    , len = arguments.length
+    , args
+    , i;
+
+  if (listeners.fn) {
+    if (listeners.once) this.removeListener(event, listeners.fn, undefined, true);
+
+    switch (len) {
+      case 1: return listeners.fn.call(listeners.context), true;
+      case 2: return listeners.fn.call(listeners.context, a1), true;
+      case 3: return listeners.fn.call(listeners.context, a1, a2), true;
+      case 4: return listeners.fn.call(listeners.context, a1, a2, a3), true;
+      case 5: return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
+      case 6: return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
+    }
+
+    for (i = 1, args = new Array(len -1); i < len; i++) {
+      args[i - 1] = arguments[i];
+    }
+
+    listeners.fn.apply(listeners.context, args);
+  } else {
+    var length = listeners.length
+      , j;
+
+    for (i = 0; i < length; i++) {
+      if (listeners[i].once) this.removeListener(event, listeners[i].fn, undefined, true);
+
+      switch (len) {
+        case 1: listeners[i].fn.call(listeners[i].context); break;
+        case 2: listeners[i].fn.call(listeners[i].context, a1); break;
+        case 3: listeners[i].fn.call(listeners[i].context, a1, a2); break;
+        case 4: listeners[i].fn.call(listeners[i].context, a1, a2, a3); break;
+        default:
+          if (!args) for (j = 1, args = new Array(len -1); j < len; j++) {
+            args[j - 1] = arguments[j];
+          }
+
+          listeners[i].fn.apply(listeners[i].context, args);
+      }
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Add a listener for a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @param {Function} fn The listener function.
+ * @param {*} [context=this] The context to invoke the listener with.
+ * @returns {EventEmitter} `this`.
+ * @public
+ */
+EventEmitter.prototype.on = function on(event, fn, context) {
+  return addListener(this, event, fn, context, false);
+};
+
+/**
+ * Add a one-time listener for a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @param {Function} fn The listener function.
+ * @param {*} [context=this] The context to invoke the listener with.
+ * @returns {EventEmitter} `this`.
+ * @public
+ */
+EventEmitter.prototype.once = function once(event, fn, context) {
+  return addListener(this, event, fn, context, true);
+};
+
+/**
+ * Remove the listeners of a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @param {Function} fn Only remove the listeners that match this function.
+ * @param {*} context Only remove the listeners that have this context.
+ * @param {Boolean} once Only remove one-time listeners.
+ * @returns {EventEmitter} `this`.
+ * @public
+ */
+EventEmitter.prototype.removeListener = function removeListener(event, fn, context, once) {
+  var evt = prefix ? prefix + event : event;
+
+  if (!this._events[evt]) return this;
+  if (!fn) {
+    clearEvent(this, evt);
+    return this;
+  }
+
+  var listeners = this._events[evt];
+
+  if (listeners.fn) {
+    if (
+      listeners.fn === fn &&
+      (!once || listeners.once) &&
+      (!context || listeners.context === context)
+    ) {
+      clearEvent(this, evt);
+    }
+  } else {
+    for (var i = 0, events = [], length = listeners.length; i < length; i++) {
+      if (
+        listeners[i].fn !== fn ||
+        (once && !listeners[i].once) ||
+        (context && listeners[i].context !== context)
+      ) {
+        events.push(listeners[i]);
+      }
+    }
+
+    //
+    // Reset the array, or remove it completely if we have no more listeners.
+    //
+    if (events.length) this._events[evt] = events.length === 1 ? events[0] : events;
+    else clearEvent(this, evt);
+  }
+
+  return this;
+};
+
+/**
+ * Remove all listeners, or those of the specified event.
+ *
+ * @param {(String|Symbol)} [event] The event name.
+ * @returns {EventEmitter} `this`.
+ * @public
+ */
+EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
+  var evt;
+
+  if (event) {
+    evt = prefix ? prefix + event : event;
+    if (this._events[evt]) clearEvent(this, evt);
+  } else {
+    this._events = new Events();
+    this._eventsCount = 0;
+  }
+
+  return this;
+};
+
+//
+// Alias methods names because people roll like that.
+//
+EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+EventEmitter.prototype.addListener = EventEmitter.prototype.on;
+
+//
+// Expose the prefix.
+//
+EventEmitter.prefixed = prefix;
+
+//
+// Allow `EventEmitter` to be imported as module namespace.
+//
+EventEmitter.EventEmitter = EventEmitter;
+
+//
+// Expose the module.
+//
+if (true) {
+  module.exports = EventEmitter;
+}
+
+
+/***/ }),
+
 /***/ "./node_modules/fast-glob/out/index.js":
 /*!*********************************************!*\
   !*** ./node_modules/fast-glob/out/index.js ***!
@@ -5038,7 +5892,7 @@ const {promisify} = __webpack_require__(/*! util */ "util");
 const fs = __webpack_require__(/*! fs */ "fs");
 const path = __webpack_require__(/*! path */ "path");
 const fastGlob = __webpack_require__(/*! fast-glob */ "./node_modules/fast-glob/out/index.js");
-const gitIgnore = __webpack_require__(/*! ignore */ "./node_modules/ignore/index.js");
+const gitIgnore = __webpack_require__(/*! ignore */ "./node_modules/globby/node_modules/ignore/index.js");
 const slash = __webpack_require__(/*! slash */ "./node_modules/slash/index.js");
 
 const DEFAULT_IGNORE = [
@@ -5344,68 +6198,10 @@ module.exports.gitignore = gitignore;
 
 /***/ }),
 
-/***/ "./node_modules/globby/stream-utils.js":
-/*!*********************************************!*\
-  !*** ./node_modules/globby/stream-utils.js ***!
-  \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const {Transform} = __webpack_require__(/*! stream */ "stream");
-
-class ObjectTransform extends Transform {
-	constructor() {
-		super({
-			objectMode: true
-		});
-	}
-}
-
-class FilterStream extends ObjectTransform {
-	constructor(filter) {
-		super();
-		this._filter = filter;
-	}
-
-	_transform(data, encoding, callback) {
-		if (this._filter(data)) {
-			this.push(data);
-		}
-
-		callback();
-	}
-}
-
-class UniqueStream extends ObjectTransform {
-	constructor() {
-		super();
-		this._pushed = new Set();
-	}
-
-	_transform(data, encoding, callback) {
-		if (!this._pushed.has(data)) {
-			this.push(data);
-			this._pushed.add(data);
-		}
-
-		callback();
-	}
-}
-
-module.exports = {
-	FilterStream,
-	UniqueStream
-};
-
-
-/***/ }),
-
-/***/ "./node_modules/ignore/index.js":
-/*!**************************************!*\
-  !*** ./node_modules/ignore/index.js ***!
-  \**************************************/
+/***/ "./node_modules/globby/node_modules/ignore/index.js":
+/*!**********************************************************!*\
+  !*** ./node_modules/globby/node_modules/ignore/index.js ***!
+  \**********************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -6006,6 +6802,64 @@ if (
     REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path)
     || isNotRelative(path)
 }
+
+
+/***/ }),
+
+/***/ "./node_modules/globby/stream-utils.js":
+/*!*********************************************!*\
+  !*** ./node_modules/globby/stream-utils.js ***!
+  \*********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+const {Transform} = __webpack_require__(/*! stream */ "stream");
+
+class ObjectTransform extends Transform {
+	constructor() {
+		super({
+			objectMode: true
+		});
+	}
+}
+
+class FilterStream extends ObjectTransform {
+	constructor(filter) {
+		super();
+		this._filter = filter;
+	}
+
+	_transform(data, encoding, callback) {
+		if (this._filter(data)) {
+			this.push(data);
+		}
+
+		callback();
+	}
+}
+
+class UniqueStream extends ObjectTransform {
+	constructor() {
+		super();
+		this._pushed = new Set();
+	}
+
+	_transform(data, encoding, callback) {
+		if (!this._pushed.has(data)) {
+			this.push(data);
+			this._pushed.add(data);
+		}
+
+		callback();
+	}
+}
+
+module.exports = {
+	FilterStream,
+	UniqueStream
+};
 
 
 /***/ }),
@@ -20597,45 +21451,54 @@ const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 const files_1 = __webpack_require__(/*! ./utils/files */ "./src/utils/files.ts");
 const config_1 = __webpack_require__(/*! ./utils/config */ "./src/utils/config.ts");
 const index_1 = __webpack_require__(/*! ./provides/index */ "./src/provides/index.ts");
+const utils_1 = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
+process.on('unhandledRejection', error => {
+    // Will print "unhandledRejection err is not defined"
+    console.log('unhandledRejection', error);
+});
 //设置 文件内容
-function init_file(config) {
+function init_file(f, config) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!vscode_1.workspace.workspaceFolders) {
             return undefined;
         }
-        let root = vscode_1.workspace.workspaceFolders[0].uri.path;
-        let f = new files_1.Files(root, config);
         let files = yield f.exec();
-        // let clones = await detectClones('/Users/wangjianliang/Documents/work/trpc-web-utils/protobuf-webpack-plugin/test/index.vue', files, config);
-        // let clones = await detectClones('/Users/wangjianliang/Documents/work/trpc-web-utils/protobuf-webpack-plugin/test/ext.vue', files, config);
-        // console.log(clones);
         return files;
     });
 }
 //根目录改变, 配置改变时重新执行
-function onChange(provider, config) {
+function onChange(f, provider, config) {
     return __awaiter(this, void 0, void 0, function* () {
-        let files = yield init_file(config);
+        let files = yield init_file(f, config);
         if (!files) {
             provider.stop();
             return;
         }
         ;
         provider.set_files(files);
+        provider.onChanges();
     });
 }
 // 激活程序
 function activate(context) {
     return __awaiter(this, void 0, void 0, function* () {
         const config = new config_1.Config();
-        let files = yield init_file(config);
+        let f = new files_1.Files(config);
+        let files = yield init_file(f, config);
         if (!files) {
             return;
         }
         ;
-        let provider = new index_1.Provider(context, files);
-        vscode_1.workspace.onDidChangeWorkspaceFolders(() => { onChange(provider, config); });
-        vscode_1.workspace.onDidChangeConfiguration(() => { onChange(provider, config); });
+        let provider = new index_1.Provider(context, files, config);
+        provider.onChanges();
+        vscode_1.workspace.onDidChangeWorkspaceFolders(utils_1.debounce(() => { onChange(f, provider, config); }));
+        vscode_1.workspace.onDidChangeConfiguration(utils_1.debounce(() => { onChange(f, provider, config); }));
+        vscode_1.workspace.onDidChangeTextDocument(utils_1.debounce((event) => {
+            let fp = event.document.uri.path;
+            let content = event.document.getText();
+            f.put(fp, { content: content });
+            provider.onChange(fp);
+        }));
     });
 }
 exports.activate = activate;
@@ -20654,12 +21517,83 @@ exports.deactivate = deactivate;
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Provider = void 0;
+const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
+const clones_1 = __webpack_require__(/*! ../utils/clones */ "./src/utils/clones.ts");
+const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils/index.ts");
 class Provider {
-    constructor(context, files) {
+    constructor(context, files, config) {
         this.context = context;
         this.files = files;
+        this.config = config;
+        this.context = context;
+        this.files = files;
+        this.config = config;
+        this.diagnosticCollection = vscode_1.languages.createDiagnosticCollection('duplication');
+        context.subscriptions.push(this.diagnosticCollection);
+        this.onChange = utils_1.debounce(this._onChange);
+        this.onChanges = utils_1.debounce(this._onChanges);
+    }
+    _onChanges() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.diagnosticCollection.clear();
+            let clones = yield clones_1.detectClones(this.files, this.config);
+            let sourceIds = [...new Set(clones.reduce((res, clone) => {
+                    res.push(clone.duplicationA.sourceId);
+                    res.push(clone.duplicationB.sourceId);
+                    return res;
+                }, []))];
+            while (sourceIds) {
+                let sourceId = sourceIds.shift();
+                if (!sourceId) {
+                    return;
+                }
+                this._onChange(sourceId, clones);
+            }
+        });
+    }
+    _onChange(sourceId, clones) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let uri = vscode_1.Uri.parse(sourceId);
+            this.diagnosticCollection.delete(uri);
+            if (!clones) {
+                clones = yield clones_1.detectClones(this.files, this.config);
+            }
+            let errs = clones_1.getDuplication(sourceId, [...clones]);
+            let diagnostics = [];
+            errs.forEach((err) => {
+                let source;
+                let other;
+                if (err.duplicationA.sourceId === sourceId) {
+                    source = err.duplicationA;
+                    other = err.duplicationB;
+                }
+                else {
+                    source = err.duplicationB;
+                    other = err.duplicationA;
+                }
+                let range = new vscode_1.Range(source.start.line, source.range[0], source.end.line, source.range[1]);
+                let diagnostic = new vscode_1.Diagnostic(range, `${other.sourceId}:${source.start.line}-${source.end.line} duplication`, 1);
+                if (diagnostic) {
+                    diagnostic.code = {
+                        value: this.files[other.sourceId].content.slice(source.range[0], source.range[1]),
+                        target: vscode_1.Uri.file(other.sourceId)
+                    };
+                    diagnostics.push(diagnostic);
+                }
+            });
+            this.diagnosticCollection.set(uri, diagnostics);
+        });
     }
     // 重设所有文件内容对象
     set_files(files) {
@@ -20667,9 +21601,107 @@ class Provider {
     }
     // 停止比对文件
     stop() {
+        this.diagnosticCollection.clear();
     }
 }
 exports.Provider = Provider;
+
+
+/***/ }),
+
+/***/ "./src/utils/clones.ts":
+/*!*****************************!*\
+  !*** ./src/utils/clones.ts ***!
+  \*****************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.detectClones = exports.getDuplication = void 0;
+const core_1 = __webpack_require__(/*! @jscpd/core */ "./node_modules/@jscpd/core/dist/index.js");
+const tokenizer_1 = __webpack_require__(/*! @jscpd/tokenizer */ "./node_modules/@jscpd/tokenizer/dist/index.js");
+function getItems(datas) {
+    return Object.keys(datas).reduce((res, next) => {
+        let item = datas[next];
+        res.push(item);
+        return res;
+    }, []);
+}
+function detectOne(detector, item) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            if (!item) {
+                return [];
+            }
+            return yield detector.detect(item.filepath, item.content, item.format);
+        }
+        catch (error) {
+            return [];
+        }
+    });
+}
+function exec(files, detector) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let clones = [];
+        let stack = [...files];
+        while (stack.length) {
+            let item = stack.shift();
+            if (!item) {
+                break;
+            }
+            let clone = yield detectOne(detector, item);
+            clones.push(...clone);
+        }
+        return clones;
+    });
+}
+// 计算重复有点问题
+function getDuplication(f, clones) {
+    let dups = [];
+    let stack = [...clones];
+    while (stack.length) {
+        let clone = stack.shift();
+        if (!clone) {
+            break;
+        }
+        if (clone.duplicationA.sourceId === f || clone.duplicationB.sourceId === f) {
+            dups.push(clone);
+        }
+    }
+    return dups;
+}
+exports.getDuplication = getDuplication;
+function detectClones(datas, config) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            let stack = getItems(datas);
+            const tokenizer = new tokenizer_1.Tokenizer();
+            const validators = [];
+            const store = new core_1.MemoryStore();
+            const detector = new core_1.Detector(tokenizer, store, validators, {
+                minLines: config.minLines,
+                maxLines: config.maxLines,
+                minTokens: config.minTokens
+            });
+            return yield exec(stack, detector);
+        }
+        catch (error) {
+            throw error;
+        }
+    });
+}
+exports.detectClones = detectClones;
 
 
 /***/ }),
@@ -20687,6 +21719,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Config = void 0;
 const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 class Config {
+    get root() {
+        var _a, _b;
+        return (_b = (_a = (vscode_1.workspace.workspaceFolders || [])[0]) === null || _a === void 0 ? void 0 : _a.uri) === null || _b === void 0 ? void 0 : _b.path;
+    }
     get ignore() {
         return vscode_1.workspace.getConfiguration('duplication')
             .get('ignore') || [
@@ -20757,20 +21793,27 @@ exports.Files = void 0;
 const _1 = __webpack_require__(/*! . */ "./src/utils/index.ts");
 const globby = __webpack_require__(/*! globby */ "./node_modules/globby/index.js");
 const bytes = __webpack_require__(/*! bytes */ "./node_modules/bytes/index.js");
-class Files {
-    constructor(root, config) {
-        this.root = root;
+const eventemitter3 = __webpack_require__(/*! eventemitter3 */ "./node_modules/eventemitter3/index.js");
+const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils/index.ts");
+class Files extends eventemitter3 {
+    constructor(config) {
+        super();
         this.config = config;
         this.datas = {};
-        this.root = root;
         this.config = config;
     }
     exec() {
         return __awaiter(this, void 0, void 0, function* () {
-            let paths = yield globby(`${this.root}/**/*`, {
+            if (!this.config.root) {
+                return {};
+            }
+            if (this.watch) {
+                yield this.watch();
+            }
+            let paths = yield globby(`${this.config.root}/**/*`, {
                 dot: true,
-                cwd: this.root,
-                ignore: this.config.ignore.map((i) => `${this.root}/${i}`),
+                cwd: this.config.root,
+                ignore: this.config.ignore.map((i) => `${this.config.root}/${i}`),
                 // ignore: this.ingore,
                 absolute: true,
                 onlyFiles: true,
@@ -20780,14 +21823,13 @@ class Files {
                 gitignore: true,
                 expandDirectories: true
             });
+            this.watch = _1.watch(`${this.config.root}/**/*`, utils_1.debounce(this.update), this.config);
             return yield this.reads(paths);
         });
     }
     reads(filepaths) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield Promise.all(filepaths.map((filepath) => __awaiter(this, void 0, void 0, function* () {
-                yield this.read(filepath);
-            })));
+            yield Promise.all(filepaths.map((filepath) => this.read(filepath)));
             return this.datas;
         });
     }
@@ -20799,20 +21841,38 @@ class Files {
     has(filepath) {
         return _1.hasOwnProperty(this.datas, filepath);
     }
+    get(filepath) {
+        return this.datas[filepath];
+    }
+    put(filepath, obj) {
+        let file = this.get(filepath);
+        if (file) {
+            this.save(filepath, Object.assign(Object.assign({}, file), obj));
+        }
+    }
     clear() {
         Object.keys(this.datas).map((key) => {
             return this.remove(key);
         });
     }
-    remove(filepath) {
-        this.removeItem(filepath);
+    save(filepath, item) {
+        this.datas[filepath] = item;
+        return item;
     }
-    update(filepath, event, path, stats) {
+    remove(filepath) {
+        let item = this.datas[filepath];
+        if (!item) {
+            return;
+        }
+        delete this.datas[filepath];
+    }
+    update(rootpath, event, filepath, stats) {
         return __awaiter(this, void 0, void 0, function* () {
             if (event === 'unlink' || event === 'error') {
                 this.remove(filepath);
             }
             yield this._read(filepath);
+            this.emit('update');
         });
     }
     read(key) {
@@ -20823,25 +21883,11 @@ class Files {
             return yield this._read(key);
         });
     }
-    removeItem(filepath) {
-        let item = this.datas[filepath];
-        if (!item) {
-            return;
-        }
-        // close watch
-        item.watched();
-        // delete key
-        delete this.datas[filepath];
-    }
-    setItem(filepath, item) {
-        this.datas[filepath] = item;
-        return item;
-    }
     skipBigFiles(entry) {
-        const { stats, path } = entry;
+        const { stats, filepath } = entry;
         const shouldSkip = bytes.parse(stats.size) > bytes.parse(this.config.maxSize);
         if (this.config.debug && shouldSkip) {
-            console.log(`File ${path} skipped! Size more then limit (${bytes(stats.size)} > ${this.config.maxSize})`);
+            console.log(`File ${filepath} skipped! Size more then limit (${bytes(stats.size)} > ${this.config.maxSize})`);
         }
         return shouldSkip;
     }
@@ -20868,14 +21914,11 @@ class Files {
             }
             let item = {
                 filepath: filepath,
-                source: f.content,
+                content: f.content,
                 format: f.format,
-                stats: f.stats,
-                watched: _1.watch(filepath, (filepath, eventName, path, stats) => {
-                    this.update(filepath, eventName, path, stats);
-                })
+                stats: f.stats
             };
-            return this.setItem(filepath, item);
+            return this.save(filepath, item);
         });
     }
 }
@@ -20903,7 +21946,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasOwnProperty = exports.watch = exports.read = void 0;
+exports.debounce = exports.hasOwnProperty = exports.watch = exports.read = void 0;
 const fs = __webpack_require__(/*! fs */ "fs");
 const pify = __webpack_require__(/*! pify */ "./node_modules/pify/index.js");
 const chokidar = __webpack_require__(/*! chokidar */ "chokidar");
@@ -20920,7 +21963,7 @@ function read(filepath, config) {
                 return undefined;
             }
             return {
-                path: filepath,
+                filepath,
                 content,
                 format,
                 stats
@@ -20932,10 +21975,11 @@ function read(filepath, config) {
     });
 }
 exports.read = read;
-function watch(filepath, update) {
+function watch(filepath, update, config) {
     let watched = chokidar.watch(filepath, {
         ignoreInitial: true,
-        followSymlinks: true
+        followSymlinks: true,
+        ignored: config.ignore
     }).on('all', (eventName, path, stats) => {
         update(filepath, eventName, path, stats);
     });
@@ -20948,6 +21992,20 @@ function hasOwnProperty(o, key) {
     return Object.prototype.hasOwnProperty.call(o, key);
 }
 exports.hasOwnProperty = hasOwnProperty;
+function debounce(fn, n, immed) {
+    let timer = undefined;
+    return function (...args) {
+        if (timer === undefined && immed === true) {
+            fn.apply(this, args);
+        }
+        timer && clearTimeout(timer);
+        n = n || 100;
+        timer = setTimeout(() => fn.apply(this, args), n);
+        return timer;
+    };
+}
+exports.debounce = debounce;
+;
 
 
 /***/ }),

@@ -4,30 +4,31 @@ import * as fs from 'fs';
 import * as globby from 'globby';
 import * as bytes from 'bytes';
 import { Config } from './config';
-export interface FileItem {
-  filepath: string,
-  source: string,
-  format: string,
-  stats: fs.Stats,
-  watched: () => Promise<void>
-}
-
+import * as eventemitter3 from 'eventemitter3';
+import { debounce } from '../utils';
 export interface FileData {
-  [filepath: string]: FileItem
+  [filepath: string]: File
 }
 
-export class Files {
+export class Files extends eventemitter3 {
   datas: FileData;
-  constructor (public root: string, public config: Config) {
+  watch: (() => Promise<void>) | undefined;
+  constructor (public config: Config) {
+    super();
     this.datas = {};
-    this.root = root;
     this.config = config;
   }
   async exec (): Promise<FileData> {
-    let paths = await globby(`${this.root}/**/*`, {
+    if (!this.config.root) {
+      return {};
+    }
+    if (this.watch) {
+      await this.watch();
+    }
+    let paths = await globby(`${this.config.root}/**/*`, {
       dot: true,
-      cwd: this.root,
-      ignore: this.config.ignore.map((i) => `${this.root}/${i}`),
+      cwd: this.config.root,
+      ignore: this.config.ignore.map((i) => `${this.config.root}/${i}`),
       // ignore: this.ingore,
       absolute: true,
       onlyFiles: true,
@@ -37,12 +38,11 @@ export class Files {
       gitignore: true,
       expandDirectories: true
     });
+    this.watch = watch(`${this.config.root}/**/*`, debounce(this.update), this.config);
     return await this.reads(paths);
   }
   async reads (filepaths: string[]): Promise<FileData> {
-    await Promise.all(filepaths.map(async (filepath) => {
-      await this.read(filepath);
-    }));
+    await Promise.all(filepaths.map((filepath) => this.read(filepath)));
     return this.datas;
   }
   removes (filepaths: string[]): void {
@@ -53,46 +53,52 @@ export class Files {
   has (filepath: string): boolean {
     return hasOwnProperty(this.datas, filepath);
   }
+  get (filepath: string): File | undefined {
+    return this.datas[filepath];
+  }
+  put (filepath: string, obj: Partial<File>) {
+    let file = this.get(filepath);
+    if (file) {
+      this.save(filepath, {
+        ...file,
+        ...obj
+      });
+    }
+  }
   clear (): void {
     Object.keys(this.datas).map((key) => {
       return this.remove(key);
     });
   }
-  remove (filepath: string): void {
-    this.removeItem(filepath);
+  save (filepath: string, item: File): File {
+    this.datas[filepath] = item;
+    return item;
   }
-  async update (filepath: string, event: WatchEventName, path: string, stats?: fs.Stats): Promise<void> {
+  remove (filepath: string): void {
+    let item = this.datas[filepath];
+    if (!item) {
+      return;
+    }
+    delete this.datas[filepath];
+  }
+  async update (rootpath: string, event: WatchEventName, filepath: string, stats?: fs.Stats): Promise<void> {
     if (event === 'unlink' || event === 'error') {
       this.remove(filepath);
     }
     await this._read(filepath);
+    this.emit('update');
   }
-  async read (key: string): Promise<FileItem | undefined> {
+  async read (key: string): Promise<File | undefined> {
     if (this.datas[key]) {
       return this.datas[key];
     }
     return await this._read(key);
   }
-  removeItem (filepath: string): void {
-    let item = this.datas[filepath];
-    if (!item) {
-      return;
-    }
-    // close watch
-    item.watched();
-    // delete key
-    delete this.datas[filepath];
-  }
-
-  setItem (filepath: string, item: FileItem): FileItem {
-    this.datas[filepath] = item;
-    return item;
-  }
   skipBigFiles (entry: File): boolean {
-    const { stats, path } = entry;
+    const { stats, filepath } = entry;
     const shouldSkip = bytes.parse(stats.size) > bytes.parse(this.config.maxSize);
     if (this.config.debug && shouldSkip) {
-      console.log(`File ${path} skipped! Size more then limit (${bytes(stats.size)} > ${this.config.maxSize})`);
+      console.log(`File ${filepath} skipped! Size more then limit (${bytes(stats.size)} > ${this.config.maxSize})`);
     }
     return shouldSkip;
   }
@@ -108,7 +114,7 @@ export class Files {
     }
     return false;
   }
-  async _read (filepath: string): Promise<FileItem | undefined> {
+  async _read (filepath: string): Promise<File | undefined> {
     let f = await read(filepath, this.config);
     if (f === undefined) {
       return;
@@ -116,15 +122,12 @@ export class Files {
     if (this.skip(f) === true) {
       return;
     }
-    let item: FileItem = {
+    let item: File = {
       filepath: filepath,
-      source: f.content,
+      content: f.content,
       format: f.format,
-      stats: f.stats,
-      watched: watch(filepath, (filepath: string, eventName: WatchEventName, path: string, stats?: fs.Stats) => {
-        this.update(filepath, eventName, path, stats);
-      })
+      stats: f.stats
     };
-    return this.setItem(filepath, item);
+    return this.save(filepath, item);
   }
 }
