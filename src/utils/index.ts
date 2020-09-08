@@ -48,16 +48,3 @@ export function watch (filepath: string, update: WatchUpdate, config: Config) {
 export function hasOwnProperty (o: any, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(o, key);
 }
-
-export function debounce<Params extends any[]> (fn: (...args: Params) => any, n?: number, immed?: boolean): (...args: Params) => any {
-  let timer: NodeJS.Timer | undefined = undefined;
-  return function (this: any, ...args: Params) {
-    if (timer === undefined && immed === true) {
-      fn.apply(this, args);
-    }
-    timer && clearTimeout(timer);
-    n = n || 100;
-    timer = setTimeout(() => fn.apply(this, args), n);
-    return timer;
-  };
-};

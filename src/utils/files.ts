@@ -5,18 +5,63 @@ import * as globby from 'globby';
 import * as bytes from 'bytes';
 import { Config } from './config';
 import * as eventemitter3 from 'eventemitter3';
-import { debounce } from '../utils';
+import { detectClones, detectOne } from './clones';
+import {
+  Detector,
+  ICloneValidator,
+  IClone,
+  IStore,
+  IMapFrame,
+  ITokenizer,
+  MemoryStore,
+  ITokenLocation,
+  IBlamedLines
+} from '@jscpd/core';
+import { Tokenizer } from '@jscpd/tokenizer';
+import { clone } from 'lodash-es';
 export interface FileData {
   [filepath: string]: File
 }
 
+export interface FileClone {
+  [filepath: string]: IClone[]
+}
+
+class Store extends MemoryStore<IMapFrame> {
+  constructor () {
+    super();
+  }
+  removeBySourceId (sourceId: string, namespace: string) {
+    let namespaces = this.values[namespace] || {};
+    Object.keys(namespaces).forEach((key) => {
+      let obj = namespaces[key];
+      if (obj.sourceId === sourceId) {
+        delete this.values[namespace][key];
+      }
+    });
+  }
+}
+
+
 export class Files extends eventemitter3 {
   datas: FileData;
+  tokenizer: ITokenizer;
+  validators: ICloneValidator[];
+  store: Store;
+  detector: Detector;
   watch: (() => Promise<void>) | undefined;
   constructor (public config: Config) {
     super();
     this.datas = {};
     this.config = config;
+    this.tokenizer = new Tokenizer();
+    this.validators = [];
+    this.store = new Store();
+    this.detector = new Detector(this.tokenizer, this.store, this.validators, {
+      minLines: this.config.minLines,
+      maxLines: this.config.maxLines,
+      minTokens: this.config.minTokens
+    });
   }
   async exec (): Promise<FileData> {
     if (!this.config.root) {
@@ -38,8 +83,9 @@ export class Files extends eventemitter3 {
       gitignore: true,
       expandDirectories: true
     });
-    this.watch = watch(`${this.config.root}/**/*`, debounce(this.update), this.config);
-    return await this.reads(paths);
+    // this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this)), this.config);
+    let datas = await this.reads(paths);
+    return datas;
   }
   async reads (filepaths: string[]): Promise<FileData> {
     await Promise.all(filepaths.map((filepath) => this.read(filepath)));
@@ -56,15 +102,31 @@ export class Files extends eventemitter3 {
   get (filepath: string): File | undefined {
     return this.datas[filepath];
   }
-  put (filepath: string, obj: Partial<File>) {
+  async put (filepath: string, obj: Partial<File>) {
     let file = this.get(filepath);
+    if (!file) {
+      return;
+    }
+    let nf: File = {
+      ...file,
+      ...obj
+    };
     if (file) {
-      this.save(filepath, {
-        ...file,
-        ...obj
-      });
+      this.save(filepath, nf);
+      // await this.changeClone(filepath, file.format, nf);
     }
   }
+  // async changeClone (filepath: string, format: string, file: File) {
+  // this.store.removeBySourceId(filepath, format);
+  // let clones = this.clones
+  //   .filter((clone) => {
+  //     return clone.duplicationA.sourceId !== filepath;
+  //   });
+  // let nc = await detectOne(this.detector, file);
+  // console.log(nc);
+  // clones.push(...nc);
+  // this.clones = clones;
+  // }
   clear (): void {
     Object.keys(this.datas).map((key) => {
       return this.remove(key);
@@ -82,11 +144,17 @@ export class Files extends eventemitter3 {
     delete this.datas[filepath];
   }
   async update (rootpath: string, event: WatchEventName, filepath: string, stats?: fs.Stats): Promise<void> {
+    let file = this.get(filepath);
     if (event === 'unlink' || event === 'error') {
       this.remove(filepath);
     }
     await this._read(filepath);
+    // await this.changeClone(filepath, file?.format || '', this.get(filepath) || ({ ...file, content: '' } as File));
     this.emit('update');
+  }
+  async getClones (): Promise<IClone[]> {
+    let clones = await detectClones(this.datas, this.detector) || [];
+    return clones;
   }
   async read (key: string): Promise<File | undefined> {
     if (this.datas[key]) {

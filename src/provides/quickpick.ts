@@ -10,7 +10,8 @@ import {
 } from 'vscode';
 import { Files } from '../utils/files';
 import { Config } from '../utils/config';
-import { detectClones, Duplications, getDuplication } from '../utils/clones';
+import { Provider } from '../provides/index';
+import { detectClones, Duplications, getDuplication, IClone } from '../utils/clones';
 
 // const decoration = window.createTextEditorDecorationType({
 //   backgroundColor: "rgba(255,0.0.0.3)"
@@ -33,10 +34,11 @@ import { detectClones, Duplications, getDuplication } from '../utils/clones';
 // adoc.revealRange(arange);
 // bdoc.revealRange(brange);
 // }
-export function QuickPick (context: ExtensionContext, f: Files, config: Config) {
+export function QuickPick (context: ExtensionContext, f: Files, provider: Provider, config: Config) {
   context.subscriptions.push(commands.registerCommand('extension.duplication', async () => {
-    let clones = await detectClones(f.datas, config);
     let sets = new Set<QuickPickItem>();
+    let clones = await f.getClones();
+    await provider.onChanges(clones);
     clones.forEach((item) => {
       let keys = [
         item.duplicationA.sourceId,

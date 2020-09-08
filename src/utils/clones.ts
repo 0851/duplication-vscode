@@ -1,6 +1,5 @@
 import {
   Detector,
-  MemoryStore,
   ICloneValidator,
   IClone,
   IStore,
@@ -37,23 +36,39 @@ function getItems (datas: FileData): File[] {
     return res;
   }, []);
 }
-async function detectOne (detector: Detector, item: File): Promise<IClone[]> {
+
+export async function detectOne (detector: Detector, item: File | undefined): Promise<IClone[]> {
+  let res: IClone[] = [];
   try {
-    if (!item) {
-      return [];
+    if (item) {
+      res = await detector.detect(item.filepath, item.content, item.format);
     }
-    return await detector.detect(item.filepath, item.content, item.format);
   } catch (error) {
-    return [];
   }
+  return res;
 }
-async function exec (files: File[], detector: Detector): Promise<IClone[]> {
-  let clones = [];
-  for (let index = 0; index < files.length; index++) {
-    const item = files[index];
-    let clone = await detectOne(detector, item);
-    clones.push(...clone);
-  }
+
+export async function exec (files: File[], detector: Detector): Promise<IClone[]> {
+  let clones: IClone[] = [];
+  const detect = async (entry: File | undefined, clones: IClone[] = []): Promise<IClone[]> => {
+    if (!entry) {
+      return clones;
+    }
+    let path = entry.filepath;
+    let content = entry.content;
+    const format: string = entry.format;
+    return detector
+      .detect(path, content, format)
+      .then((clns: IClone[]) => {
+        clones.push(...clns);
+        const file = files.pop();
+        if (file) {
+          return detect(file, clones);
+        }
+        return clones;
+      });
+  };
+  await detect(files.pop(), clones);
   return clones;
 }
 
@@ -113,17 +128,10 @@ export function getDuplication (f: string, clones: IClone[]): Duplications[] {
     return dup.source.sourceId === f;
   });
 }
-export async function detectClones (datas: FileData, config: Config): Promise<IClone[]> {
+
+export async function detectClones (datas: FileData, detector: Detector): Promise<IClone[]> {
   try {
     let stack = getItems(datas);
-    const tokenizer: ITokenizer = new Tokenizer();
-    const validators: ICloneValidator[] = [];
-    const store: IStore<IMapFrame> = new MemoryStore();
-    const detector = new Detector(tokenizer, store, validators, {
-      minLines: config.minLines,
-      maxLines: config.maxLines,
-      minTokens: config.minTokens
-    });
     return await exec(stack, detector);
   } catch (error) {
     throw error;

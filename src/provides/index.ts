@@ -1,4 +1,4 @@
-import { FileData } from '../utils/files';
+import { FileData, Files } from '../utils/files';
 import {
   ExtensionContext, languages, Uri, Range,
   Diagnostic,
@@ -6,28 +6,35 @@ import {
   DiagnosticRelatedInformation,
   Location
 } from 'vscode';
-import { detectClones, getDuplication, IClone } from '../utils/clones';
+import { getDuplication, IClone } from '../utils/clones';
 import { Config } from '../utils/config';
-import { debounce } from '../utils';
+import debounce from 'lodash-es/debounce';
 export const CODE_ACTION = 'goto-duplication';
 
-
+interface DebouncedFunc<T extends (...args: any[]) => any> {
+  (...args: Parameters<T>): ReturnType<T> | undefined;
+  cancel (): void;
+  flush (): ReturnType<T> | undefined;
+}
 export class Provider {
   diagnosticCollection: DiagnosticCollection;
-  onChange: (sourceId: string, clones?: IClone[]) => Promise<void>;
-  onChanges: () => Promise<void>;
-  constructor (public context: ExtensionContext, public files: FileData, public config: Config) {
+  onChange: DebouncedFunc<(sourceId: string, clones?: IClone[]) => Promise<void>>;
+  onChanges: DebouncedFunc<(clones?: IClone[]) => Promise<void>>;
+  file: Files;
+  constructor (public context: ExtensionContext, file: Files, public config: Config) {
     this.context = context;
-    this.files = files;
     this.config = config;
+    this.file = file;
     this.diagnosticCollection = languages.createDiagnosticCollection('duplication');
     context.subscriptions.push(this.diagnosticCollection);
-    this.onChange = debounce(this._onChange);
-    this.onChanges = debounce(this._onChanges);
+    this.onChange = debounce(this._onChange.bind(this));
+    this.onChanges = debounce(this._onChanges.bind(this));
   }
-  async _onChanges (): Promise<void> {
+  async _onChanges (clones?: IClone[]): Promise<void> {
     this.diagnosticCollection.clear();
-    let clones = await detectClones(this.files, this.config);
+    if (!clones) {
+      clones = await this.file.getClones();
+    }
     let sourceIds = [...new Set(clones.reduce((res: string[], clone) => {
       res.push(clone.duplicationA.sourceId);
       res.push(clone.duplicationB.sourceId);
@@ -44,9 +51,11 @@ export class Provider {
   async _onChange (sourceId: string, clones?: IClone[]): Promise<void> {
     let uri = Uri.parse(sourceId);
     this.diagnosticCollection.delete(uri);
+
     if (!clones) {
-      clones = await detectClones(this.files, this.config);
+      clones = await this.file.getClones();
     }
+
     let errs = getDuplication(sourceId, clones);
 
     let diagnostics: Diagnostic[] = [];
@@ -58,18 +67,13 @@ export class Provider {
         let otherRange = new Range(other.start.line, other.range[0], other.end.line, other.range[1]);
         let diagnostic = new Diagnostic(range, `duplication`, this.config.severity);
         if (diagnostic) {
-          diagnostic.code = CODE_ACTION;
-          // let message = this.files[other.sourceId].content.slice(other.range[0], other.range[1]);
-          diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), '')];
+          // diagnostic.code = CODE_ACTION;
+          diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), 'duplication')];
           diagnostics.push(diagnostic);
         }
       });
     });
     this.diagnosticCollection.set(uri, diagnostics);
-  }
-  // 重设所有文件内容对象
-  set_files (files: FileData) {
-    this.files = files;
   }
   // 停止比对文件
   stop () {
