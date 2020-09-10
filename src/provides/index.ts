@@ -6,8 +6,8 @@ import {
   DiagnosticRelatedInformation,
   Location
 } from 'vscode';
-import { getDuplication, IClone } from '../utils/clones';
 import { Config } from '../utils/config';
+import { IClone } from '../utils/files';
 import debounce from 'lodash-es/debounce';
 export const CODE_ACTION = 'goto-duplication';
 
@@ -33,11 +33,11 @@ export class Provider {
   async _onChanges (clones?: IClone[]): Promise<void> {
     this.diagnosticCollection.clear();
     if (!clones) {
-      clones = await this.file.getClones();
+      clones = await this.file.clones();
     }
     let sourceIds = [...new Set(clones.reduce((res: string[], clone) => {
-      res.push(clone.duplicationA.sourceId);
-      res.push(clone.duplicationB.sourceId);
+      res.push(clone.a.filename);
+      res.push(clone.b.filename);
       return res;
     }, []))];
     while (sourceIds) {
@@ -53,26 +53,25 @@ export class Provider {
     this.diagnosticCollection.delete(uri);
 
     if (!clones) {
-      clones = await this.file.getClones();
+      // clones = await this.file.getClones();
     }
 
-    let errs = getDuplication(sourceId, clones);
-
     let diagnostics: Diagnostic[] = [];
-    errs.forEach((err) => {
-      let source = err.source;
-      let others = err.refs;
-      others.forEach((other) => {
-        let range = new Range(source.start.line, source.range[0], source.end.line, source.range[1]);
-        let otherRange = new Range(other.start.line, other.range[0], other.end.line, other.range[1]);
-        let diagnostic = new Diagnostic(range, `duplication`, this.config.severity);
-        if (diagnostic) {
-          // diagnostic.code = CODE_ACTION;
-          diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), 'duplication')];
-          diagnostics.push(diagnostic);
-        }
-      });
-    });
+    // let errs = getDuplication(sourceId, clones);
+    // errs.forEach((err) => {
+    //   let source = err.source;
+    //   let others = err.refs;
+    //   others.forEach((other) => {
+    //     let range = new Range(source.start.line, source.range[0], source.end.line, source.range[1]);
+    //     let otherRange = new Range(other.start.line, other.range[0], other.end.line, other.range[1]);
+    //     let diagnostic = new Diagnostic(range, `duplication`, this.config.severity);
+    //     if (diagnostic) {
+    //       // diagnostic.code = CODE_ACTION;
+    //       diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), 'duplication')];
+    //       diagnostics.push(diagnostic);
+    //     }
+    //   });
+    // });
     this.diagnosticCollection.set(uri, diagnostics);
   }
   // 停止比对文件

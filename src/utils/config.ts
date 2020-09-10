@@ -40,6 +40,10 @@ export class Config {
     return workspace.getConfiguration()
       .get<boolean>('duplication.debug') || false;
   }
+  get watch (): boolean {
+    return workspace.getConfiguration()
+      .get<boolean>('duplication.watch') || false;
+  }
   get severity (): DiagnosticSeverity {
     return workspace.getConfiguration()
       .get<DiagnosticSeverity>('duplication.severity') || 1;

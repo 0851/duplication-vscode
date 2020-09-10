@@ -11,7 +11,6 @@ import {
 import { Files } from '../utils/files';
 import { Config } from '../utils/config';
 import { Provider } from '../provides/index';
-import { detectClones, Duplications, getDuplication, IClone } from '../utils/clones';
 
 // const decoration = window.createTextEditorDecorationType({
 //   backgroundColor: "rgba(255,0.0.0.3)"
@@ -37,19 +36,19 @@ import { detectClones, Duplications, getDuplication, IClone } from '../utils/clo
 export function QuickPick (context: ExtensionContext, f: Files, provider: Provider, config: Config) {
   context.subscriptions.push(commands.registerCommand('extension.duplication', async () => {
     let sets = new Set<QuickPickItem>();
-    let clones = await f.getClones();
-    await provider.onChanges(clones);
-    clones.forEach((item) => {
-      let keys = [
-        item.duplicationA.sourceId,
-        item.duplicationB.sourceId
-      ];
-      keys.sort();
-      sets.add({
-        label: keys.map(key => key.replace(`${config.root}/` || '', '')).join(` <=> `),
-        description: keys.join(` <=> `)
-      });
-    });
+    // let clones = await f.getClones();
+    // await provider.onChanges(clones);
+    // clones.forEach((item) => {
+    //   let keys = [
+    //     item.duplicationA.sourceId,
+    //     item.duplicationB.sourceId
+    //   ];
+    //   keys.sort();
+    //   sets.add({
+    //     label: keys.map(key => key.replace(`${config.root}/` || '', '')).join(` <=> `),
+    //     description: keys.join(` <=> `)
+    //   });
+    // });
     let find = await window.showQuickPick([...sets]);
     if (!find) {
       return;

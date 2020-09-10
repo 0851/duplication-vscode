@@ -5,67 +5,32 @@ import * as globby from 'globby';
 import * as bytes from 'bytes';
 import { Config } from './config';
 import * as eventemitter3 from 'eventemitter3';
-import { detectClones, detectOne } from './clones';
-import {
-  Detector,
-  ICloneValidator,
-  IClone,
-  IStore,
-  IMapFrame,
-  ITokenizer,
-  MemoryStore,
-  ITokenLocation,
-  IBlamedLines
-} from '@jscpd/core';
-import { Tokenizer } from '@jscpd/tokenizer';
-import { clone } from 'lodash-es';
+import debounce from 'lodash-es/debounce';
+import { IToken } from './tokenizer';
 export interface FileData {
   [filepath: string]: File
 }
-
-export interface FileClone {
-  [filepath: string]: IClone[]
+export interface FileHash {
+  [filepath: string]: number
 }
-
-class Store extends MemoryStore<IMapFrame> {
-  constructor () {
-    super();
-  }
-  removeBySourceId (sourceId: string, namespace: string) {
-    let namespaces = this.values[namespace] || {};
-    Object.keys(namespaces).forEach((key) => {
-      let obj = namespaces[key];
-      if (obj.sourceId === sourceId) {
-        delete this.values[namespace][key];
-      }
-    });
-  }
+export interface IClone {
+  a: IToken
+  b: IToken
 }
-
 
 export class Files extends eventemitter3 {
   datas: FileData;
-  tokenizer: ITokenizer;
-  validators: ICloneValidator[];
-  store: Store;
-  detector: Detector;
   watch: (() => Promise<void>) | undefined;
+  hashs: FileHash;
   constructor (public config: Config) {
     super();
     this.datas = {};
+    this.hashs = {};
     this.config = config;
-    this.tokenizer = new Tokenizer();
-    this.validators = [];
-    this.store = new Store();
-    this.detector = new Detector(this.tokenizer, this.store, this.validators, {
-      minLines: this.config.minLines,
-      maxLines: this.config.maxLines,
-      minTokens: this.config.minTokens
-    });
   }
-  async exec (): Promise<FileData> {
+  async exec (): Promise<void> {
     if (!this.config.root) {
-      return {};
+      return;
     }
     if (this.watch) {
       await this.watch();
@@ -74,7 +39,6 @@ export class Files extends eventemitter3 {
       dot: true,
       cwd: this.config.root,
       ignore: this.config.ignore.map((i) => `${this.config.root}/${i}`),
-      // ignore: this.ingore,
       absolute: true,
       onlyFiles: true,
       unique: true,
@@ -83,13 +47,19 @@ export class Files extends eventemitter3 {
       gitignore: true,
       expandDirectories: true
     });
-    // this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this)), this.config);
-    let datas = await this.reads(paths);
-    return datas;
+    if (this.config.watch === true) {
+      this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this)), this.config);
+    }
+    await this.reads(paths);
   }
-  async reads (filepaths: string[]): Promise<FileData> {
+  //计算汉明距离
+  hammingDistance (num1: number, num2: number): number {
+    return ((num1 ^ num2).toString(2).match(/1/g) || '').length;
+  };
+  async reads (filepaths: string[]): Promise<void> {
+    console.time('reads');
     await Promise.all(filepaths.map((filepath) => this.read(filepath)));
-    return this.datas;
+    console.timeEnd('reads');
   }
   removes (filepaths: string[]): void {
     filepaths.map((filepath) => {
@@ -113,20 +83,8 @@ export class Files extends eventemitter3 {
     };
     if (file) {
       this.save(filepath, nf);
-      // await this.changeClone(filepath, file.format, nf);
     }
   }
-  // async changeClone (filepath: string, format: string, file: File) {
-  // this.store.removeBySourceId(filepath, format);
-  // let clones = this.clones
-  //   .filter((clone) => {
-  //     return clone.duplicationA.sourceId !== filepath;
-  //   });
-  // let nc = await detectOne(this.detector, file);
-  // console.log(nc);
-  // clones.push(...nc);
-  // this.clones = clones;
-  // }
   clear (): void {
     Object.keys(this.datas).map((key) => {
       return this.remove(key);
@@ -143,18 +101,15 @@ export class Files extends eventemitter3 {
     }
     delete this.datas[filepath];
   }
+  async clones (): Promise<IClone[]> {
+    return [];
+  }
   async update (rootpath: string, event: WatchEventName, filepath: string, stats?: fs.Stats): Promise<void> {
-    let file = this.get(filepath);
     if (event === 'unlink' || event === 'error') {
       this.remove(filepath);
     }
     await this._read(filepath);
-    // await this.changeClone(filepath, file?.format || '', this.get(filepath) || ({ ...file, content: '' } as File));
     this.emit('update');
-  }
-  async getClones (): Promise<IClone[]> {
-    let clones = await detectClones(this.datas, this.detector) || [];
-    return clones;
   }
   async read (key: string): Promise<File | undefined> {
     if (this.datas[key]) {
@@ -183,6 +138,7 @@ export class Files extends eventemitter3 {
     return false;
   }
   async _read (filepath: string): Promise<File | undefined> {
+
     let f = await read(filepath, this.config);
     if (f === undefined) {
       return;
@@ -190,12 +146,6 @@ export class Files extends eventemitter3 {
     if (this.skip(f) === true) {
       return;
     }
-    let item: File = {
-      filepath: filepath,
-      content: f.content,
-      format: f.format,
-      stats: f.stats
-    };
-    return this.save(filepath, item);
+    return this.save(filepath, f);
   }
 }

@@ -7,6 +7,7 @@ import {
   ProgressLocation,
   CancellationToken
 } from 'vscode';
+
 import { Files, FileData } from './utils/files';
 import { Config } from './utils/config';
 import { Provider } from './provides/index';
@@ -28,12 +29,18 @@ async function init (f: Files, provider: Provider, config: Config) {
     title: 'calculate duplication code',
     cancellable: false
   }, async (progress, token: CancellationToken) => {
-    let files = await f.exec();
-    if (!files) {
-      provider.stop();
-      return;
-    };
-    await provider.onChanges();
+    try {
+      console.time('time');
+      await f.exec();
+      console.timeEnd('time');
+      if (!f.datas) {
+        provider.stop();
+        return;
+      };
+      await provider.onChanges();
+    } catch (error) {
+      console.error(error);
+    }
   });
 }
 // 激活程序
