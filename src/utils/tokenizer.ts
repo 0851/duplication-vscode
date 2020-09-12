@@ -1,20 +1,4 @@
-import * as XXH from 'xxhashjs';
-export interface IToken {
-  value: string,
-  filename: string,
-  start: Loc,
-  end: Loc
-}
-export interface Loc {
-  pos: number,
-  line: number,
-  col: number
-}
-
-export type IShingles = {
-  [hashcode: string]: IToken
-};
-
+import { IToken, ILoc, IShingles } from '../index.d';
 // 空白
 let space_reg = /^\s+/;
 // 字符串
@@ -27,8 +11,8 @@ let n_reg = /\n/;
 let any_reg = /^.+/;
 
 function tokenizer_generator (
-  start: Loc,
-  end: Loc,
+  start: ILoc,
+  end: ILoc,
   value: string,
   filename: string
 ): IToken {
@@ -39,14 +23,13 @@ function tokenizer_generator (
     filename
   };
 }
-let count = 0;
+
 class Tokenizer {
   readonly source: string;
   private peek_stack: IToken[];
   private pos: number;
   private line: number;
   private col: number;
-  shingles: IShingles = {};
   tokens: IToken[] = [];
   constructor (public input: string = '', public filename: string, public k: number = 50) {
     this.input = input;
@@ -60,30 +43,8 @@ class Tokenizer {
   }
   exec () {
     this.next_all();
-    this.make_shingles();
   }
-  hash (str: string): string {
-    // hash计算速度慢
-    // var h = XXH.h64(str, 0xABCB).toString(16);
-    return (count++).toString();
-  }
-  make_shingles () {
-    let tokens = this.tokens;
-    for (let index = 0; index < tokens.length; index++) {
-      const element = tokens.slice(index, (this.k + index + 1));
-      let filename = this.filename;
-      let start = element[0].start;
-      let end = element[element.length - 1].end;
-      let value = this.source.slice(start.pos, end.pos);
-      this.shingles[this.hash(value)] = {
-        filename,
-        start,
-        end,
-        value
-      };
-    }
-  }
-  get_loc (): Loc {
+  get_loc (): ILoc {
     return {
       pos: this.pos,
       line: this.line,

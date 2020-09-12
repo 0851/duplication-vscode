@@ -2,32 +2,26 @@ import * as fs from 'fs';
 import * as pify from 'pify';
 import * as chokidar from 'chokidar';
 import { Config } from './config';
-import { Tokenizer, IToken, IShingles } from './tokenizer';
+import { IFile, IShingles } from '../index.d';
+import { Tokenizer } from './tokenizer';
 import {
   performance,
   PerformanceObserver
 } from 'perf_hooks';
-export interface File {
-  filepath: string
-  content: string
-  stats: fs.Stats
-  tokens: IToken[],
-  shingles: IShingles
-}
-export async function read (filepath: string, config: Config): Promise<File | undefined> {
+
+export async function read (filepath: string, config: Config): Promise<(IFile & { stats: fs.Stats }) | undefined> {
   try {
     let [stats, content] = await Promise.all([
       pify(fs.stat)(filepath),
       pify(fs.readFile)(filepath, 'utf-8')
     ]);
-    const tokenizer = new Tokenizer(content, filepath);
+    let tokenizer = new Tokenizer(content, filepath, config.minTokens);
     tokenizer.exec();
     return {
       filepath,
       content,
-      tokens: tokenizer.tokens,
-      shingles: tokenizer.shingles,
-      stats
+      stats,
+      tokens: tokenizer.tokens
     };
   } catch (error) {
     return undefined;
@@ -88,4 +82,57 @@ export function exec<T extends (...args: any[]) => any> (fn: (...args: Parameter
     }
     return res;
   };
+}
+
+
+function murmurhash3 (key: string, seed: number) {
+  let remainder: number = key.length & 3; // key.length % 4
+  let bytes: number = key.length - remainder;
+  let h1: number = seed;
+  let c1: number = 0xcc9e2d51;
+  let c2: number = 0x1b873593;
+  let i: number = 0;
+  let k1: number;
+  let h1b: number;
+
+  while (i < bytes) {
+    k1 =
+      ((key.charCodeAt(i) & 0xff)) |
+      ((key.charCodeAt(++i) & 0xff) << 8) |
+      ((key.charCodeAt(++i) & 0xff) << 16) |
+      ((key.charCodeAt(++i) & 0xff) << 24);
+    ++i;
+
+    k1 = ((((k1 & 0xffff) * c1) + ((((k1 >>> 16) * c1) & 0xffff) << 16))) & 0xffffffff;
+    k1 = (k1 << 15) | (k1 >>> 17);
+    k1 = ((((k1 & 0xffff) * c2) + ((((k1 >>> 16) * c2) & 0xffff) << 16))) & 0xffffffff;
+
+    h1 ^= k1;
+    h1 = (h1 << 13) | (h1 >>> 19);
+    h1b = ((((h1 & 0xffff) * 5) + ((((h1 >>> 16) * 5) & 0xffff) << 16))) & 0xffffffff;
+    h1 = (((h1b & 0xffff) + 0x6b64) + ((((h1b >>> 16) + 0xe654) & 0xffff) << 16));
+  }
+
+  k1 = 0;
+
+  switch (remainder) {
+    case 3: k1 ^= (key.charCodeAt(i + 2) & 0xff) << 16;
+    case 2: k1 ^= (key.charCodeAt(i + 1) & 0xff) << 8;
+    case 1: k1 ^= (key.charCodeAt(i) & 0xff);
+
+      k1 = (((k1 & 0xffff) * c1) + ((((k1 >>> 16) * c1) & 0xffff) << 16)) & 0xffffffff;
+      k1 = (k1 << 15) | (k1 >>> 17);
+      k1 = (((k1 & 0xffff) * c2) + ((((k1 >>> 16) * c2) & 0xffff) << 16)) & 0xffffffff;
+      h1 ^= k1;
+  }
+
+  h1 ^= key.length;
+
+  h1 ^= h1 >>> 16;
+  h1 = (((h1 & 0xffff) * 0x85ebca6b) + ((((h1 >>> 16) * 0x85ebca6b) & 0xffff) << 16)) & 0xffffffff;
+  h1 ^= h1 >>> 13;
+  h1 = ((((h1 & 0xffff) * 0xc2b2ae35) + ((((h1 >>> 16) * 0xc2b2ae35) & 0xffff) << 16))) & 0xffffffff;
+  h1 ^= h1 >>> 16;
+
+  return h1 >>> 0;
 }

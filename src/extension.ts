@@ -7,13 +7,22 @@ import {
   ProgressLocation,
   CancellationToken
 } from 'vscode';
-
-import { Files, FileData } from './utils/files';
+import { Files } from './utils/files';
 import { Config } from './utils/config';
 import { Provider } from './provides/index';
 import { QuickPick } from './provides/quickpick';
 import debounce from 'lodash-es/debounce';
+import { IFileData, IFile, IToken } from './index.d';
 
+
+// import { spawn, Thread, Worker, Pool } from "threads";
+// import * as  os from 'os';
+// let size = os.cpus().length || 8;
+// let pool = Pool(() => spawn(new Worker("./worker.js")), size);
+
+
+// 关闭最大监听数限制, worker 任务时会超过
+process.setMaxListeners(0);
 process.on('unhandledRejection', error => {
   console.log('unhandledRejection', error);
 });
@@ -24,7 +33,7 @@ async function init (f: Files, provider: Provider, config: Config) {
   if (!workspace.workspaceFolders) {
     return undefined;
   }
-  window.withProgress({
+  await window.withProgress({
     location: ProgressLocation.Notification,
     title: 'calculate duplication code',
     cancellable: false
@@ -37,22 +46,35 @@ async function init (f: Files, provider: Provider, config: Config) {
         provider.stop();
         return;
       };
+      // console.time("pool");
+      // let set = [];
+      // Object.keys(f.shingles).forEach((shingle) => {
+      //   if (f.shingles[shingle].length > 1) {
+      //     set.push(f.shingles[shingle]);
+      //   }
+      // });
+      // console.log(set);
+      // console.timeEnd('pool');
       await provider.onChanges();
     } catch (error) {
       console.error(error);
     }
   });
 }
+
+
 // 激活程序
 export async function activate (context: ExtensionContext) {
   const config = new Config();
+
   const f = new Files(config);
+
   const provider = new Provider(context, f, config);
 
-  init(f, provider, config);
+  await init(f, provider, config);
 
-  context.subscriptions.push(workspace.onDidChangeWorkspaceFolders(debounce(() => { init(f, provider, config); })));
-  context.subscriptions.push(workspace.onDidChangeConfiguration(debounce(() => { init(f, provider, config); })));
+  context.subscriptions.push(workspace.onDidChangeWorkspaceFolders(debounce(async () => { await init(f, provider, config); })));
+  context.subscriptions.push(workspace.onDidChangeConfiguration(debounce(async () => { await init(f, provider, config); })));
 
   context.subscriptions.push(workspace.onDidChangeTextDocument(
     debounce(async (event: TextDocumentChangeEvent) => {
@@ -80,4 +102,5 @@ export async function activate (context: ExtensionContext) {
   QuickPick(context, f, provider, config);
 }
 
-export function deactivate () { }
+export async function deactivate () {
+}

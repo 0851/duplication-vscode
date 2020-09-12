@@ -1,4 +1,4 @@
-import { FileData, Files } from '../utils/files';
+import { Files } from '../utils/files';
 import {
   ExtensionContext, languages, Uri, Range,
   Diagnostic,
@@ -7,19 +7,15 @@ import {
   Location
 } from 'vscode';
 import { Config } from '../utils/config';
-import { IClone } from '../utils/files';
+import { IClone, IFileData, IDebouncedFunc } from '../index.d';
 import debounce from 'lodash-es/debounce';
 export const CODE_ACTION = 'goto-duplication';
 
-interface DebouncedFunc<T extends (...args: any[]) => any> {
-  (...args: Parameters<T>): ReturnType<T> | undefined;
-  cancel (): void;
-  flush (): ReturnType<T> | undefined;
-}
+
 export class Provider {
   diagnosticCollection: DiagnosticCollection;
-  onChange: DebouncedFunc<(sourceId: string, clones?: IClone[]) => Promise<void>>;
-  onChanges: DebouncedFunc<(clones?: IClone[]) => Promise<void>>;
+  onChange: IDebouncedFunc<(sourceId: string, clones?: IClone[]) => Promise<void>>;
+  onChanges: IDebouncedFunc<(clones?: IClone[]) => Promise<void>>;
   file: Files;
   constructor (public context: ExtensionContext, file: Files, public config: Config) {
     this.context = context;

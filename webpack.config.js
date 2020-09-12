@@ -5,17 +5,22 @@ const path = require('path');
 
 const config = {
   target: 'node',
-  entry: './src/extension.ts',
+  entry: {
+    'extension': './src/extension.ts',
+    // "worker": './src/worker.ts'
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'extension.js',
+    filename: '[name].js',
     libraryTarget: "commonjs2",
     devtoolModuleFilenameTemplate: "../[resource-path]",
   },
   devtool: 'source-map',
   externals: {
-    vscode: "commonjs vscode",
-    chokidar: "commonjs chokidar"
+    "vscode": "vscode",
+    "chokidar": "chokidar",
+    "tiny-worker": "tiny-worker",
+    "threads": "threads"
   },
   resolve: {
     extensions: ['.ts', '.js']
@@ -25,7 +30,7 @@ const config = {
       {
         enforce: 'pre',
         test: /\.ts$/,
-        exclude: /node_modules/,
+        exclude: [/node_modules/],
         loader: 'eslint-loader',
         options: {
           emitWarning: true, // 这个配置需要打开，才能在控制台输出warning信息
@@ -36,12 +41,10 @@ const config = {
       {
         test: /\.ts$/,
         exclude: /node_modules/,
-        use: [{
-          loader: 'ts-loader'
-        }]
+        loader: ['ts-loader']
       }
     ]
-  },
+  }
 };
 
 module.exports = config;

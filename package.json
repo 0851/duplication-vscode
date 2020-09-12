@@ -5,7 +5,7 @@
 	"version": "0.1.0",
 	"publisher": "0851",
 	"engines": {
-		"vscode": "^1.47.0"
+		"vscode": "^1.41.0"
 	},
 	"categories": [
 		"Other"
@@ -112,24 +112,25 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"chokidar": "^3.4.0"
+		"chokidar": "^3.4.0",
+		"threads": "^1.6.3",
+		"tiny-worker": "^2.3.0"
 	},
 	"devDependencies": {
-		"@babel/parser": "^7.10.5",
-		"@babel/traverse": "^7.10.5",
-		"@jscpd/core": "^3.3.17",
-		"@jscpd/tokenizer": "^3.3.17",
+		"@babel/types": "^7.11.5",
 		"@types/bytes": "^3.1.0",
 		"@types/lodash-es": "^4.17.3",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.13.15",
 		"@types/pify": "^3.0.2",
 		"@types/vscode": "^1.47.0",
+		"@types/xxhashjs": "^0.2.2",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
 		"@typescript-eslint/parser": "^2.30.0",
 		"bytes": "^3.1.0",
 		"eslint": "^6.8.0",
 		"eslint-loader": "^4.0.2",
+		"eventemitter3": "^4.0.7",
 		"globby": "^11.0.1",
 		"lodash-es": "^4.17.15",
 		"mocha": "^7.1.2",

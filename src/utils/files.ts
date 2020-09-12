@@ -1,31 +1,23 @@
 
-import { read, watch, File, WatchEventName, hasOwnProperty } from '.';
+import { read, watch, WatchEventName, hasOwnProperty } from './index';
 import * as fs from 'fs';
 import * as globby from 'globby';
 import * as bytes from 'bytes';
 import { Config } from './config';
 import * as eventemitter3 from 'eventemitter3';
 import debounce from 'lodash-es/debounce';
-import { IToken } from './tokenizer';
-export interface FileData {
-  [filepath: string]: File
-}
-export interface FileHash {
-  [filepath: string]: number
-}
-export interface IClone {
-  a: IToken
-  b: IToken
-}
+import { IToken, IClone, IFile, IFileData, IShingles } from '../index.d';
+import { Tokenizer } from './tokenizer';
+
 
 export class Files extends eventemitter3 {
-  datas: FileData;
+  datas: IFileData;
   watch: (() => Promise<void>) | undefined;
-  hashs: FileHash;
+  paths: Set<string> = new Set();
+  shingles: IShingles = {};
   constructor (public config: Config) {
     super();
     this.datas = {};
-    this.hashs = {};
     this.config = config;
   }
   async exec (): Promise<void> {
@@ -35,6 +27,7 @@ export class Files extends eventemitter3 {
     if (this.watch) {
       await this.watch();
     }
+    console.time('globby');
     let paths = await globby(`${this.config.root}/**/*`, {
       dot: true,
       cwd: this.config.root,
@@ -50,6 +43,7 @@ export class Files extends eventemitter3 {
     if (this.config.watch === true) {
       this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this)), this.config);
     }
+    console.timeEnd('globby');
     await this.reads(paths);
   }
   //计算汉明距离
@@ -69,15 +63,15 @@ export class Files extends eventemitter3 {
   has (filepath: string): boolean {
     return hasOwnProperty(this.datas, filepath);
   }
-  get (filepath: string): File | undefined {
+  get (filepath: string): IFile | undefined {
     return this.datas[filepath];
   }
-  async put (filepath: string, obj: Partial<File>) {
+  async put (filepath: string, obj: Partial<IFile>) {
     let file = this.get(filepath);
     if (!file) {
       return;
     }
-    let nf: File = {
+    let nf: IFile = {
       ...file,
       ...obj
     };
@@ -90,7 +84,7 @@ export class Files extends eventemitter3 {
       return this.remove(key);
     });
   }
-  save (filepath: string, item: File): File {
+  save (filepath: string, item: IFile): IFile {
     this.datas[filepath] = item;
     return item;
   }
@@ -99,6 +93,7 @@ export class Files extends eventemitter3 {
     if (!item) {
       return;
     }
+    this.paths.delete(filepath);
     delete this.datas[filepath];
   }
   async clones (): Promise<IClone[]> {
@@ -111,13 +106,13 @@ export class Files extends eventemitter3 {
     await this._read(filepath);
     this.emit('update');
   }
-  async read (key: string): Promise<File | undefined> {
+  async read (key: string): Promise<IFile | undefined> {
     if (this.datas[key]) {
       return this.datas[key];
     }
     return await this._read(key);
   }
-  skipBigFiles (entry: File): boolean {
+  skipBigFiles (entry: IFile & { stats: fs.Stats }): boolean {
     const { stats, filepath } = entry;
     const shouldSkip = bytes.parse(stats.size) > bytes.parse(this.config.maxSize);
     if (this.config.debug && shouldSkip) {
@@ -125,7 +120,7 @@ export class Files extends eventemitter3 {
     }
     return shouldSkip;
   }
-  skip (f: File) {
+  skip (f: IFile & { stats: fs.Stats }) {
     if (f.content === '') {
       return true;
     }
@@ -137,8 +132,7 @@ export class Files extends eventemitter3 {
     }
     return false;
   }
-  async _read (filepath: string): Promise<File | undefined> {
-
+  async _read (filepath: string): Promise<IFile | undefined> {
     let f = await read(filepath, this.config);
     if (f === undefined) {
       return;
@@ -146,6 +140,10 @@ export class Files extends eventemitter3 {
     if (this.skip(f) === true) {
       return;
     }
-    return this.save(filepath, f);
+    return this.save(filepath, {
+      filepath: f.filepath,
+      content: f.content,
+      tokens: f.tokens
+    });
   }
 }

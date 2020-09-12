@@ -9502,6 +9502,12 @@ const config_1 = __webpack_require__(/*! ./utils/config */ "./src/utils/config.t
 const index_1 = __webpack_require__(/*! ./provides/index */ "./src/provides/index.ts");
 const quickpick_1 = __webpack_require__(/*! ./provides/quickpick */ "./src/provides/quickpick.ts");
 const debounce_1 = __webpack_require__(/*! lodash-es/debounce */ "./node_modules/lodash-es/debounce.js");
+// import { spawn, Thread, Worker, Pool } from "threads";
+// import * as  os from 'os';
+// let size = os.cpus().length || 8;
+// let pool = Pool(() => spawn(new Worker("./worker.js")), size);
+// 关闭最大监听数限制, worker 任务时会超过
+process.setMaxListeners(0);
 process.on('unhandledRejection', error => {
     console.log('unhandledRejection', error);
 });
@@ -9511,7 +9517,7 @@ function init(f, provider, config) {
         if (!vscode_1.workspace.workspaceFolders) {
             return undefined;
         }
-        vscode_1.window.withProgress({
+        yield vscode_1.window.withProgress({
             location: vscode_1.ProgressLocation.Notification,
             title: 'calculate duplication code',
             cancellable: false
@@ -9525,6 +9531,15 @@ function init(f, provider, config) {
                     return;
                 }
                 ;
+                // console.time("pool");
+                // let set = [];
+                // Object.keys(f.shingles).forEach((shingle) => {
+                //   if (f.shingles[shingle].length > 1) {
+                //     set.push(f.shingles[shingle]);
+                //   }
+                // });
+                // console.log(set);
+                // console.timeEnd('pool');
                 yield provider.onChanges();
             }
             catch (error) {
@@ -9539,9 +9554,9 @@ function activate(context) {
         const config = new config_1.Config();
         const f = new files_1.Files(config);
         const provider = new index_1.Provider(context, f, config);
-        init(f, provider, config);
-        context.subscriptions.push(vscode_1.workspace.onDidChangeWorkspaceFolders(debounce_1.default(() => { init(f, provider, config); })));
-        context.subscriptions.push(vscode_1.workspace.onDidChangeConfiguration(debounce_1.default(() => { init(f, provider, config); })));
+        yield init(f, provider, config);
+        context.subscriptions.push(vscode_1.workspace.onDidChangeWorkspaceFolders(debounce_1.default(() => __awaiter(this, void 0, void 0, function* () { yield init(f, provider, config); }))));
+        context.subscriptions.push(vscode_1.workspace.onDidChangeConfiguration(debounce_1.default(() => __awaiter(this, void 0, void 0, function* () { yield init(f, provider, config); }))));
         context.subscriptions.push(vscode_1.workspace.onDidChangeTextDocument(debounce_1.default((event) => __awaiter(this, void 0, void 0, function* () {
             let fp = event.document.uri.path;
             let content = event.document.getText();
@@ -9563,7 +9578,10 @@ function activate(context) {
     });
 }
 exports.activate = activate;
-function deactivate() { }
+function deactivate() {
+    return __awaiter(this, void 0, void 0, function* () {
+    });
+}
 exports.deactivate = deactivate;
 
 
@@ -9830,7 +9848,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Files = void 0;
-const _1 = __webpack_require__(/*! . */ "./src/utils/index.ts");
+const index_1 = __webpack_require__(/*! ./index */ "./src/utils/index.ts");
 const globby = __webpack_require__(/*! globby */ "./node_modules/globby/index.js");
 const bytes = __webpack_require__(/*! bytes */ "./node_modules/bytes/index.js");
 const eventemitter3 = __webpack_require__(/*! eventemitter3 */ "./node_modules/eventemitter3/index.js");
@@ -9839,8 +9857,9 @@ class Files extends eventemitter3 {
     constructor(config) {
         super();
         this.config = config;
+        this.paths = new Set();
+        this.shingles = {};
         this.datas = {};
-        this.hashs = {};
         this.config = config;
     }
     exec() {
@@ -9851,6 +9870,7 @@ class Files extends eventemitter3 {
             if (this.watch) {
                 yield this.watch();
             }
+            console.time('globby');
             let paths = yield globby(`${this.config.root}/**/*`, {
                 dot: true,
                 cwd: this.config.root,
@@ -9864,8 +9884,9 @@ class Files extends eventemitter3 {
                 expandDirectories: true
             });
             if (this.config.watch === true) {
-                this.watch = _1.watch(`${this.config.root}/**/*`, debounce_1.default(this.update.bind(this)), this.config);
+                this.watch = index_1.watch(`${this.config.root}/**/*`, debounce_1.default(this.update.bind(this)), this.config);
             }
+            console.timeEnd('globby');
             yield this.reads(paths);
         });
     }
@@ -9887,7 +9908,7 @@ class Files extends eventemitter3 {
         });
     }
     has(filepath) {
-        return _1.hasOwnProperty(this.datas, filepath);
+        return index_1.hasOwnProperty(this.datas, filepath);
     }
     get(filepath) {
         return this.datas[filepath];
@@ -9918,6 +9939,7 @@ class Files extends eventemitter3 {
         if (!item) {
             return;
         }
+        this.paths.delete(filepath);
         delete this.datas[filepath];
     }
     clones() {
@@ -9964,14 +9986,18 @@ class Files extends eventemitter3 {
     }
     _read(filepath) {
         return __awaiter(this, void 0, void 0, function* () {
-            let f = yield _1.read(filepath, this.config);
+            let f = yield index_1.read(filepath, this.config);
             if (f === undefined) {
                 return;
             }
             if (this.skip(f) === true) {
                 return;
             }
-            return this.save(filepath, f);
+            return this.save(filepath, {
+                filepath: f.filepath,
+                content: f.content,
+                tokens: f.tokens
+            });
         });
     }
 }
@@ -10012,14 +10038,13 @@ function read(filepath, config) {
                 pify(fs.stat)(filepath),
                 pify(fs.readFile)(filepath, 'utf-8')
             ]);
-            const tokenizer = new tokenizer_1.Tokenizer(content, filepath);
+            let tokenizer = new tokenizer_1.Tokenizer(content, filepath, config.minTokens);
             tokenizer.exec();
             return {
                 filepath,
                 content,
-                tokens: tokenizer.tokens,
-                shingles: tokenizer.shingles,
-                stats
+                stats,
+                tokens: tokenizer.tokens
             };
         }
         catch (error) {
@@ -10087,6 +10112,49 @@ function exec(fn) {
     };
 }
 exports.exec = exec;
+function murmurhash3(key, seed) {
+    let remainder = key.length & 3; // key.length % 4
+    let bytes = key.length - remainder;
+    let h1 = seed;
+    let c1 = 0xcc9e2d51;
+    let c2 = 0x1b873593;
+    let i = 0;
+    let k1;
+    let h1b;
+    while (i < bytes) {
+        k1 =
+            ((key.charCodeAt(i) & 0xff)) |
+                ((key.charCodeAt(++i) & 0xff) << 8) |
+                ((key.charCodeAt(++i) & 0xff) << 16) |
+                ((key.charCodeAt(++i) & 0xff) << 24);
+        ++i;
+        k1 = ((((k1 & 0xffff) * c1) + ((((k1 >>> 16) * c1) & 0xffff) << 16))) & 0xffffffff;
+        k1 = (k1 << 15) | (k1 >>> 17);
+        k1 = ((((k1 & 0xffff) * c2) + ((((k1 >>> 16) * c2) & 0xffff) << 16))) & 0xffffffff;
+        h1 ^= k1;
+        h1 = (h1 << 13) | (h1 >>> 19);
+        h1b = ((((h1 & 0xffff) * 5) + ((((h1 >>> 16) * 5) & 0xffff) << 16))) & 0xffffffff;
+        h1 = (((h1b & 0xffff) + 0x6b64) + ((((h1b >>> 16) + 0xe654) & 0xffff) << 16));
+    }
+    k1 = 0;
+    switch (remainder) {
+        case 3: k1 ^= (key.charCodeAt(i + 2) & 0xff) << 16;
+        case 2: k1 ^= (key.charCodeAt(i + 1) & 0xff) << 8;
+        case 1:
+            k1 ^= (key.charCodeAt(i) & 0xff);
+            k1 = (((k1 & 0xffff) * c1) + ((((k1 >>> 16) * c1) & 0xffff) << 16)) & 0xffffffff;
+            k1 = (k1 << 15) | (k1 >>> 17);
+            k1 = (((k1 & 0xffff) * c2) + ((((k1 >>> 16) * c2) & 0xffff) << 16)) & 0xffffffff;
+            h1 ^= k1;
+    }
+    h1 ^= key.length;
+    h1 ^= h1 >>> 16;
+    h1 = (((h1 & 0xffff) * 0x85ebca6b) + ((((h1 >>> 16) * 0x85ebca6b) & 0xffff) << 16)) & 0xffffffff;
+    h1 ^= h1 >>> 13;
+    h1 = ((((h1 & 0xffff) * 0xc2b2ae35) + ((((h1 >>> 16) * 0xc2b2ae35) & 0xffff) << 16))) & 0xffffffff;
+    h1 ^= h1 >>> 16;
+    return h1 >>> 0;
+}
 
 
 /***/ }),
@@ -10118,13 +10186,11 @@ function tokenizer_generator(start, end, value, filename) {
         filename
     };
 }
-let count = 0;
 class Tokenizer {
     constructor(input = '', filename, k = 50) {
         this.input = input;
         this.filename = filename;
         this.k = k;
-        this.shingles = {};
         this.tokens = [];
         this.input = input;
         this.source = input;
@@ -10137,28 +10203,6 @@ class Tokenizer {
     }
     exec() {
         this.next_all();
-        this.make_shingles();
-    }
-    hash(str) {
-        // hash计算速度慢
-        // var h = XXH.h64(str, 0xABCB).toString(16);
-        return (count++).toString();
-    }
-    make_shingles() {
-        let tokens = this.tokens;
-        for (let index = 0; index < tokens.length; index++) {
-            const element = tokens.slice(index, (this.k + index + 1));
-            let filename = this.filename;
-            let start = element[0].start;
-            let end = element[element.length - 1].end;
-            let value = this.source.slice(start.pos, end.pos);
-            this.shingles[this.hash(value)] = {
-                filename,
-                start,
-                end,
-                value
-            };
-        }
     }
     get_loc() {
         return {
