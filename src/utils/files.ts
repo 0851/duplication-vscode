@@ -140,6 +140,7 @@ export class Files extends eventemitter3 {
     if (this.skip(f) === true) {
       return;
     }
+    this.paths.add(filepath);
     return this.save(filepath, {
       filepath: f.filepath,
       content: f.content,

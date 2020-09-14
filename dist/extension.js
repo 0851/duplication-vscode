@@ -9499,6 +9499,7 @@ exports.deactivate = exports.activate = void 0;
 const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 const files_1 = __webpack_require__(/*! ./utils/files */ "./src/utils/files.ts");
 const config_1 = __webpack_require__(/*! ./utils/config */ "./src/utils/config.ts");
+const utils_1 = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
 const index_1 = __webpack_require__(/*! ./provides/index */ "./src/provides/index.ts");
 const quickpick_1 = __webpack_require__(/*! ./provides/quickpick */ "./src/provides/quickpick.ts");
 const debounce_1 = __webpack_require__(/*! lodash-es/debounce */ "./node_modules/lodash-es/debounce.js");
@@ -9555,6 +9556,10 @@ function activate(context) {
         const f = new files_1.Files(config);
         const provider = new index_1.Provider(context, f, config);
         yield init(f, provider, config);
+        console.time('arrayCombine');
+        let combines = utils_1.arrayCombine([...f.paths], 2);
+        console.timeEnd('arrayCombine');
+        console.log(combines);
         context.subscriptions.push(vscode_1.workspace.onDidChangeWorkspaceFolders(debounce_1.default(() => __awaiter(this, void 0, void 0, function* () { yield init(f, provider, config); }))));
         context.subscriptions.push(vscode_1.workspace.onDidChangeConfiguration(debounce_1.default(() => __awaiter(this, void 0, void 0, function* () { yield init(f, provider, config); }))));
         context.subscriptions.push(vscode_1.workspace.onDidChangeTextDocument(debounce_1.default((event) => __awaiter(this, void 0, void 0, function* () {
@@ -9993,6 +9998,7 @@ class Files extends eventemitter3 {
             if (this.skip(f) === true) {
                 return;
             }
+            this.paths.add(filepath);
             return this.save(filepath, {
                 filepath: f.filepath,
                 content: f.content,
@@ -10025,7 +10031,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exec = exports.execAsync = exports.hasOwnProperty = exports.watch = exports.read = void 0;
+exports.filterByPath = exports.getFlagArrs = exports.arrayCombine = exports.exec = exports.execAsync = exports.hasOwnProperty = exports.watch = exports.read = void 0;
 const fs = __webpack_require__(/*! fs */ "fs");
 const pify = __webpack_require__(/*! pify */ "./node_modules/pify/index.js");
 const chokidar = __webpack_require__(/*! chokidar */ "chokidar");
@@ -10112,6 +10118,70 @@ function exec(fn) {
     };
 }
 exports.exec = exec;
+// from http://jimyuan.github.io/blog/2019/04/03/combination-algorithm-with-js.html
+// 改良
+// 文件名分组 所有组合
+/**
+ * 获得指定数组的所有组合
+ */
+function arrayCombine(targetArr = [], count = 1) {
+    if (!Array.isArray(targetArr)) {
+        return [];
+    }
+    ;
+    const resultArrs = [];
+    // 所有组合的 01 排列
+    const flagArrs = getFlagArrs(targetArr.length, count);
+    while (flagArrs.length) {
+        const flag = flagArrs.shift();
+        if (!flag) {
+            continue;
+        }
+        let reg = /1/g;
+        let match;
+        let res = [];
+        while (match = reg.exec(flag), match !== null) {
+            res.push(targetArr[match.index]);
+        }
+        ;
+        resultArrs.push(res);
+    }
+    return resultArrs;
+}
+exports.arrayCombine = arrayCombine;
+/**
+ * 获得从 m 中取 n 的所有组合
+ * 思路如下：
+ * 生成一个长度为 m 的数组，
+ * 数组元素的值为 1 表示其下标代表的数被选中，为 0 则没选中。
+ *
+ * 1. 初始化数组，前 n 个元素置 1，表示第一个组合为前 n 个数；
+ * 2. 从左到右扫描数组元素值的 “10” 组合，找到第一个 “10” 组合后将其变为 “01” 组合；
+ * 3. 将其左边的所有 “1” 全部移动到数组的最左端
+ * 4. 当 n 个 “1” 全部移动到最右端时（没有 “10” 组合了），得到了最后一个组合。
+ */
+function getFlagArrs(m, n = 1) {
+    if (n < 1 || m < n) {
+        return [];
+    }
+    ;
+    // 先生成一个长度为 m 字符串，开头为 n 个 1， 例如“11100”
+    let str = '1'.repeat(n) + '0'.repeat(m - n);
+    // 1
+    const resultArrs = [str];
+    const reg = /10/;
+    while (reg.test(str)) {
+        str = str.replace(reg, '01');
+        resultArrs.push(str);
+    }
+    return resultArrs;
+}
+exports.getFlagArrs = getFlagArrs;
+// 获取指定文件的所有组合
+function filterByPath(groups, filepath) {
+    return [];
+}
+exports.filterByPath = filterByPath;
 function murmurhash3(key, seed) {
     let remainder = key.length & 3; // key.length % 4
     let bytes = key.length - remainder;

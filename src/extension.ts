@@ -9,6 +9,7 @@ import {
 } from 'vscode';
 import { Files } from './utils/files';
 import { Config } from './utils/config';
+import { arrayCombine } from './utils';
 import { Provider } from './provides/index';
 import { QuickPick } from './provides/quickpick';
 import debounce from 'lodash-es/debounce';
@@ -72,6 +73,12 @@ export async function activate (context: ExtensionContext) {
   const provider = new Provider(context, f, config);
 
   await init(f, provider, config);
+
+  console.time('arrayCombine');
+  let combines = arrayCombine([...f.paths], 2);
+  console.timeEnd('arrayCombine');
+
+  console.log(combines);
 
   context.subscriptions.push(workspace.onDidChangeWorkspaceFolders(debounce(async () => { await init(f, provider, config); })));
   context.subscriptions.push(workspace.onDidChangeConfiguration(debounce(async () => { await init(f, provider, config); })));
