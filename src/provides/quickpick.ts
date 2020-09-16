@@ -4,64 +4,61 @@ import {
   Uri,
   window,
   commands,
-  ViewColumn,
-  QuickPickItem,
-  DecorationOptions
+  ViewColumn
 } from 'vscode';
 import { Files } from '../utils/files';
 import { Config } from '../utils/config';
 import { Provider } from '../provides/index';
+import { IToken } from '../index.d';
+import { arrayCombine } from '../utils/combine';
+import { dup } from '../utils/duplication';
 
-// const decoration = window.createTextEditorDecorationType({
-//   backgroundColor: "rgba(255,0.0.0.3)"
-// });
-// function setDecorationOptions (one: Duplications, two: Duplications): DecorationOptions[] {
-//   let hoverMessage = `Matchs ${two.source.sourceId}:${two.source.start.line}`;
-//   return [];
-// }
-// async function showDiff (a: Duplications[], b: string) {
-// let asource = a[0].source;
-// let auri = Uri.parse(asource.sourceId);
-// let buri = Uri.parse(b);
-// let [adocOpen, bdocOpen] = await Promise.all([workspace.openTextDocument(auri), workspace.openTextDocument(buri)]);
-// let [adoc, bdoc] = await Promise.all([window.showTextDocument(adocOpen, ViewColumn.One), window.showTextDocument(bdocOpen, ViewColumn.Two)]);
+const decoration = window.createTextEditorDecorationType({
+  backgroundColor: "rgba(255,0,0,0.3)"
+});
 
-// let arange = new Range(a.source.start.line, a.source.range[0], a.source.end.line, a.source.range[1]);
-// let brange = new Range(b.source.start.line, b.source.range[0], b.source.end.line, b.source.range[1]);
-// adoc.setDecorations(decoration, setDecorationOptions(a, b));
-// bdoc.setDecorations(decoration, setDecorationOptions(b, a));
-// adoc.revealRange(arange);
-// bdoc.revealRange(brange);
-// }
+async function showDiff (a: IToken, b: IToken) {
+  let auri = Uri.parse(a.filename);
+  let buri = Uri.parse(b.filename);
+  let [adocOpen, bdocOpen] = await Promise.all([workspace.openTextDocument(auri), workspace.openTextDocument(buri)]);
+  let [adoc, bdoc] = await Promise.all([window.showTextDocument(adocOpen, ViewColumn.One), window.showTextDocument(bdocOpen, ViewColumn.Two)]);
+
+  let arange = new Range(a.start.line - 1, a.start.col - 1, a.end.line - 1, a.end.col - 1);
+  let brange = new Range(b.start.line - 1, b.start.col - 1, b.end.line - 1, b.end.col - 1);
+  adoc.setDecorations(decoration, [{
+    range: arange,
+    hoverMessage: `Matchs ${a.filename}:${b.filename}`
+  }]);
+  bdoc.setDecorations(decoration, [{
+    range: brange,
+    hoverMessage: `Matchs ${b.filename}:${a.filename}`
+  }]);
+  adoc.revealRange(arange);
+  bdoc.revealRange(brange);
+}
+
+function removeroot (p: string, root: string | undefined): string {
+  if (root === undefined) {
+    return p;
+  }
+  return p.replace(new RegExp(`^${root}/`, 'i'), '');
+}
 export function QuickPick (context: ExtensionContext, f: Files, provider: Provider, config: Config) {
   context.subscriptions.push(commands.registerCommand('extension.duplication', async () => {
-    let sets = new Set<QuickPickItem>();
-    // let clones = await f.getClones();
-    // await provider.onChanges(clones);
-    // clones.forEach((item) => {
-    //   let keys = [
-    //     item.duplicationA.sourceId,
-    //     item.duplicationB.sourceId
-    //   ];
-    //   keys.sort();
-    //   sets.add({
-    //     label: keys.map(key => key.replace(`${config.root}/` || '', '')).join(` <=> `),
-    //     description: keys.join(` <=> `)
-    //   });
-    // });
-    let find = await window.showQuickPick([...sets]);
+    let p = [...f.paths];
+    let combines = arrayCombine(p, 2);
+    let diff = dup(combines, f.datas, config.minTokens);
+    let picks = diff.map((item) => {
+      return {
+        label: `${removeroot(item.a.filename, config.root)}:${item.a.start.line} <==> ${removeroot(item.b.filename, config.root)}:${item.b.start.line}`,
+        ...item
+      };
+    });
+    let find = await window.showQuickPick(picks);
     if (!find) {
       return;
     }
-    let keys = find.description?.split(' <=> ');
-    if (!keys) {
-      return;
-    }
-    let ak = keys[0];
-    let bk = keys[1];
-    commands.executeCommand('vscode.diff', Uri.parse(ak), Uri.parse(bk), find.label);
-    // let a = getDuplication(ak, clones);
-    // showDiff(a, bk);
+    showDiff(find.a, find.b);
   }));
 
 }

@@ -7,15 +7,16 @@ import {
   Location
 } from 'vscode';
 import { Config } from '../utils/config';
-import { IClone, IFileData, IDebouncedFunc } from '../index.d';
+import { IDebouncedFunc } from '../index.d';
 import debounce from 'lodash-es/debounce';
 export const CODE_ACTION = 'goto-duplication';
-
+import { arrayCombine, filterByPath } from '../utils/combine';
+import { dup } from '../utils/duplication';
 
 export class Provider {
   diagnosticCollection: DiagnosticCollection;
-  onChange: IDebouncedFunc<(sourceId: string, clones?: IClone[]) => Promise<void>>;
-  onChanges: IDebouncedFunc<(clones?: IClone[]) => Promise<void>>;
+  onChange: IDebouncedFunc<(sourceId: string) => Promise<void>>;
+  onChanges: IDebouncedFunc<() => Promise<void>>;
   file: Files;
   constructor (public context: ExtensionContext, file: Files, public config: Config) {
     this.context = context;
@@ -23,52 +24,52 @@ export class Provider {
     this.file = file;
     this.diagnosticCollection = languages.createDiagnosticCollection('duplication');
     context.subscriptions.push(this.diagnosticCollection);
-    this.onChange = debounce(this._onChange.bind(this));
-    this.onChanges = debounce(this._onChanges.bind(this));
+    this.onChange = debounce(this._onChange.bind(this), config.debounceWait);
+    this.onChanges = debounce(this._onChanges.bind(this), config.debounceWait);
   }
-  async _onChanges (clones?: IClone[]): Promise<void> {
+  async _onChanges (): Promise<void> {
     this.diagnosticCollection.clear();
-    if (!clones) {
-      clones = await this.file.clones();
-    }
-    let sourceIds = [...new Set(clones.reduce((res: string[], clone) => {
-      res.push(clone.a.filename);
-      res.push(clone.b.filename);
-      return res;
-    }, []))];
-    while (sourceIds) {
-      let sourceId = sourceIds.shift();
-      if (!sourceId) {
+    console.time('changes');
+    let p = [...this.file.paths];
+    let combines = arrayCombine(p, 2);
+    let actions = [];
+    while (p.length) {
+      let filename = p.shift();
+      if (!filename) {
         return;
       }
-      this._onChange(sourceId, clones);
+      let uri = Uri.parse(filename);
+      actions.push(this.setone(filename, uri, combines));
     }
+    await Promise.all(actions);
+    console.timeEnd('changes');
   }
-  async _onChange (sourceId: string, clones?: IClone[]): Promise<void> {
-    let uri = Uri.parse(sourceId);
-    this.diagnosticCollection.delete(uri);
-
-    if (!clones) {
-      // clones = await this.file.getClones();
+  async setone (filename: string, uri: Uri, combines: string[][]): Promise<void> {
+    let comb = filterByPath(combines, filename);
+    if (comb.length <= 0) {
+      return;
     }
-
     let diagnostics: Diagnostic[] = [];
-    // let errs = getDuplication(sourceId, clones);
-    // errs.forEach((err) => {
-    //   let source = err.source;
-    //   let others = err.refs;
-    //   others.forEach((other) => {
-    //     let range = new Range(source.start.line, source.range[0], source.end.line, source.range[1]);
-    //     let otherRange = new Range(other.start.line, other.range[0], other.end.line, other.range[1]);
-    //     let diagnostic = new Diagnostic(range, `duplication`, this.config.severity);
-    //     if (diagnostic) {
-    //       // diagnostic.code = CODE_ACTION;
-    //       diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), 'duplication')];
-    //       diagnostics.push(diagnostic);
-    //     }
-    //   });
-    // });
+    let diff = dup(comb, this.file.datas, this.config.minTokens);
+    diff.forEach((obj) => {
+      let range = new Range(obj.a.start.line - 1, obj.a.start.col - 1, obj.a.end.line - 1, obj.a.end.col - 1);
+      let otherRange = new Range(obj.b.start.line - 1, obj.b.start.col - 1, obj.b.end.line - 1, obj.b.end.col - 1);
+      let diagnostic = new Diagnostic(range, `duplication`, this.config.severity);
+      if (diagnostic) {
+        diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(obj.b.filename), otherRange), 'duplication')];
+        diagnostics.push(diagnostic);
+      }
+    });
     this.diagnosticCollection.set(uri, diagnostics);
+  }
+  async _onChange (filename: string): Promise<void> {
+    console.time('change');
+    let uri = Uri.parse(filename);
+    this.diagnosticCollection.delete(uri);
+    let p = [...this.file.paths];
+    let combines = arrayCombine(p, 2);
+    await this.setone(filename, uri, combines);
+    console.timeEnd('change');
   }
   // 停止比对文件
   stop () {

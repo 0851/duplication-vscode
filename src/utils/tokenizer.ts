@@ -1,10 +1,10 @@
-import { IToken, ILoc, IShingles } from '../index.d';
+import { IToken, ILoc } from '../index.d';
 // 空白
 let space_reg = /^\s+/;
 // 字符串
 let string_reg = /^([\'\"\`]+)(?<value>(?:[^\1])*?)\1/;
 // 其他token
-let other_reg = /^.+?(?=\s)/;
+let other_reg = /^[^\s\'\"\']+/;
 
 let n_reg = /\n/;
 
@@ -31,7 +31,7 @@ class Tokenizer {
   private line: number;
   private col: number;
   tokens: IToken[] = [];
-  constructor (public input: string = '', public filename: string, public k: number = 50) {
+  constructor (public input: string = '', public filename: string) {
     this.input = input;
     this.source = input;
     this.filename = filename;
@@ -39,7 +39,6 @@ class Tokenizer {
     this.pos = 0;
     this.line = 1;
     this.col = 1;
-    this.k = k;
   }
   exec () {
     this.next_all();

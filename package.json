@@ -41,22 +41,16 @@
 						"description": "忽略文件列表",
 						"scope": "window"
 					},
+					"duplication.debounceWait": {
+						"type": "number",
+						"default": 50,
+						"description": "节流调用等待时间 -> 200ms",
+						"scope": "window"
+					},
 					"duplication.minTokens": {
 						"type": "number",
 						"default": 50,
 						"description": "最小匹配分词 -> 50",
-						"scope": "window"
-					},
-					"duplication.maxLines": {
-						"type": "number",
-						"default": 10000,
-						"description": "最大匹配行 -> 10000",
-						"scope": "window"
-					},
-					"duplication.minLines": {
-						"type": "number",
-						"default": 5,
-						"description": "最小匹配行 -> 5",
 						"scope": "window"
 					},
 					"duplication.maxSize": {
@@ -80,17 +74,6 @@
 						],
 						"default": 1,
 						"description": "提示等级 0,1,2",
-						"scope": "window"
-					},
-					"duplication.formatsExts": {
-						"type": "object",
-						"additionalProperties": {
-							"type": "array",
-							"items": {
-								"type": "string"
-							}
-						},
-						"description": "附加格式 -> [key: string]: string[]",
 						"scope": "window"
 					}
 				}
@@ -124,7 +107,6 @@
 		"@types/node": "^13.13.15",
 		"@types/pify": "^3.0.2",
 		"@types/vscode": "^1.47.0",
-		"@types/xxhashjs": "^0.2.2",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
 		"@typescript-eslint/parser": "^2.30.0",
 		"bytes": "^3.1.0",
@@ -140,8 +122,7 @@
 		"typescript": "^3.8.3",
 		"vscode-test": "^1.3.0",
 		"webpack": "^4.43.0",
-		"webpack-cli": "^3.3.12",
-		"xxhashjs": "^0.2.2"
+		"webpack-cli": "^3.3.12"
 	},
 	"repository": {
 		"type": "git",

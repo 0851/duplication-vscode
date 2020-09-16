@@ -9499,14 +9499,9 @@ exports.deactivate = exports.activate = void 0;
 const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 const files_1 = __webpack_require__(/*! ./utils/files */ "./src/utils/files.ts");
 const config_1 = __webpack_require__(/*! ./utils/config */ "./src/utils/config.ts");
-const utils_1 = __webpack_require__(/*! ./utils */ "./src/utils/index.ts");
 const index_1 = __webpack_require__(/*! ./provides/index */ "./src/provides/index.ts");
 const quickpick_1 = __webpack_require__(/*! ./provides/quickpick */ "./src/provides/quickpick.ts");
 const debounce_1 = __webpack_require__(/*! lodash-es/debounce */ "./node_modules/lodash-es/debounce.js");
-// import { spawn, Thread, Worker, Pool } from "threads";
-// import * as  os from 'os';
-// let size = os.cpus().length || 8;
-// let pool = Pool(() => spawn(new Worker("./worker.js")), size);
 // 关闭最大监听数限制, worker 任务时会超过
 process.setMaxListeners(0);
 process.on('unhandledRejection', error => {
@@ -9524,23 +9519,12 @@ function init(f, provider, config) {
             cancellable: false
         }, (progress, token) => __awaiter(this, void 0, void 0, function* () {
             try {
-                console.time('time');
                 yield f.exec();
-                console.timeEnd('time');
                 if (!f.datas) {
                     provider.stop();
                     return;
                 }
                 ;
-                // console.time("pool");
-                // let set = [];
-                // Object.keys(f.shingles).forEach((shingle) => {
-                //   if (f.shingles[shingle].length > 1) {
-                //     set.push(f.shingles[shingle]);
-                //   }
-                // });
-                // console.log(set);
-                // console.timeEnd('pool');
                 yield provider.onChanges();
             }
             catch (error) {
@@ -9556,19 +9540,14 @@ function activate(context) {
         const f = new files_1.Files(config);
         const provider = new index_1.Provider(context, f, config);
         yield init(f, provider, config);
-        console.time('arrayCombine');
-        let combines = utils_1.arrayCombine([...f.paths], 2);
-        console.timeEnd('arrayCombine');
-        console.log(combines);
-        context.subscriptions.push(vscode_1.workspace.onDidChangeWorkspaceFolders(debounce_1.default(() => __awaiter(this, void 0, void 0, function* () { yield init(f, provider, config); }))));
-        context.subscriptions.push(vscode_1.workspace.onDidChangeConfiguration(debounce_1.default(() => __awaiter(this, void 0, void 0, function* () { yield init(f, provider, config); }))));
+        context.subscriptions.push(vscode_1.workspace.onDidChangeWorkspaceFolders(debounce_1.default(() => __awaiter(this, void 0, void 0, function* () { yield init(f, provider, config); }), config.debounceWait)));
+        context.subscriptions.push(vscode_1.workspace.onDidChangeConfiguration(debounce_1.default(() => __awaiter(this, void 0, void 0, function* () { yield init(f, provider, config); }), config.debounceWait)));
         context.subscriptions.push(vscode_1.workspace.onDidChangeTextDocument(debounce_1.default((event) => __awaiter(this, void 0, void 0, function* () {
             let fp = event.document.uri.path;
             let content = event.document.getText();
             yield f.put(fp, { content: content });
-            // 性能问题 暂时屏蔽
-            // provider.onChange(fp);
-        }))));
+            provider.onChange(fp);
+        }), config.debounceWait)));
         context.subscriptions.push(vscode_1.window.onDidChangeActiveTextEditor(debounce_1.default((editor) => __awaiter(this, void 0, void 0, function* () {
             if (!editor) {
                 return;
@@ -9576,9 +9555,8 @@ function activate(context) {
             let fp = editor.document.uri.path;
             let content = editor.document.getText();
             yield f.put(fp, { content: content });
-            // 性能问题 暂时屏蔽
-            // provider.onChange(fp);
-        }))));
+            provider.onChange(fp);
+        }), config.debounceWait)));
         quickpick_1.QuickPick(context, f, provider, config);
     });
 }
@@ -9615,6 +9593,8 @@ exports.Provider = exports.CODE_ACTION = void 0;
 const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
 const debounce_1 = __webpack_require__(/*! lodash-es/debounce */ "./node_modules/lodash-es/debounce.js");
 exports.CODE_ACTION = 'goto-duplication';
+const combine_1 = __webpack_require__(/*! ../utils/combine */ "./src/utils/combine.ts");
+const duplication_1 = __webpack_require__(/*! ../utils/duplication */ "./src/utils/duplication.ts");
 class Provider {
     constructor(context, file, config) {
         this.context = context;
@@ -9624,53 +9604,57 @@ class Provider {
         this.file = file;
         this.diagnosticCollection = vscode_1.languages.createDiagnosticCollection('duplication');
         context.subscriptions.push(this.diagnosticCollection);
-        this.onChange = debounce_1.default(this._onChange.bind(this));
-        this.onChanges = debounce_1.default(this._onChanges.bind(this));
+        this.onChange = debounce_1.default(this._onChange.bind(this), config.debounceWait);
+        this.onChanges = debounce_1.default(this._onChanges.bind(this), config.debounceWait);
     }
-    _onChanges(clones) {
+    _onChanges() {
         return __awaiter(this, void 0, void 0, function* () {
             this.diagnosticCollection.clear();
-            if (!clones) {
-                clones = yield this.file.clones();
-            }
-            let sourceIds = [...new Set(clones.reduce((res, clone) => {
-                    res.push(clone.a.filename);
-                    res.push(clone.b.filename);
-                    return res;
-                }, []))];
-            while (sourceIds) {
-                let sourceId = sourceIds.shift();
-                if (!sourceId) {
+            console.time('changes');
+            let p = [...this.file.paths];
+            let combines = combine_1.arrayCombine(p, 2);
+            let actions = [];
+            while (p.length) {
+                let filename = p.shift();
+                if (!filename) {
                     return;
                 }
-                this._onChange(sourceId, clones);
+                let uri = vscode_1.Uri.parse(filename);
+                actions.push(this.setone(filename, uri, combines));
             }
+            yield Promise.all(actions);
+            console.timeEnd('changes');
         });
     }
-    _onChange(sourceId, clones) {
+    setone(filename, uri, combines) {
         return __awaiter(this, void 0, void 0, function* () {
-            let uri = vscode_1.Uri.parse(sourceId);
-            this.diagnosticCollection.delete(uri);
-            if (!clones) {
-                // clones = await this.file.getClones();
+            let comb = combine_1.filterByPath(combines, filename);
+            if (comb.length <= 0) {
+                return;
             }
             let diagnostics = [];
-            // let errs = getDuplication(sourceId, clones);
-            // errs.forEach((err) => {
-            //   let source = err.source;
-            //   let others = err.refs;
-            //   others.forEach((other) => {
-            //     let range = new Range(source.start.line, source.range[0], source.end.line, source.range[1]);
-            //     let otherRange = new Range(other.start.line, other.range[0], other.end.line, other.range[1]);
-            //     let diagnostic = new Diagnostic(range, `duplication`, this.config.severity);
-            //     if (diagnostic) {
-            //       // diagnostic.code = CODE_ACTION;
-            //       diagnostic.relatedInformation = [new DiagnosticRelatedInformation(new Location(Uri.parse(other.sourceId), otherRange), 'duplication')];
-            //       diagnostics.push(diagnostic);
-            //     }
-            //   });
-            // });
+            let diff = duplication_1.dup(comb, this.file.datas, this.config.minTokens);
+            diff.forEach((obj) => {
+                let range = new vscode_1.Range(obj.a.start.line - 1, obj.a.start.col - 1, obj.a.end.line - 1, obj.a.end.col - 1);
+                let otherRange = new vscode_1.Range(obj.b.start.line - 1, obj.b.start.col - 1, obj.b.end.line - 1, obj.b.end.col - 1);
+                let diagnostic = new vscode_1.Diagnostic(range, `duplication`, this.config.severity);
+                if (diagnostic) {
+                    diagnostic.relatedInformation = [new vscode_1.DiagnosticRelatedInformation(new vscode_1.Location(vscode_1.Uri.parse(obj.b.filename), otherRange), 'duplication')];
+                    diagnostics.push(diagnostic);
+                }
+            });
             this.diagnosticCollection.set(uri, diagnostics);
+        });
+    }
+    _onChange(filename) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.time('change');
+            let uri = vscode_1.Uri.parse(filename);
+            this.diagnosticCollection.delete(uri);
+            let p = [...this.file.paths];
+            let combines = combine_1.arrayCombine(p, 2);
+            yield this.setone(filename, uri, combines);
+            console.timeEnd('change');
         });
     }
     // 停止比对文件
@@ -9704,59 +9688,147 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QuickPick = void 0;
 const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
-// const decoration = window.createTextEditorDecorationType({
-//   backgroundColor: "rgba(255,0.0.0.3)"
-// });
-// function setDecorationOptions (one: Duplications, two: Duplications): DecorationOptions[] {
-//   let hoverMessage = `Matchs ${two.source.sourceId}:${two.source.start.line}`;
-//   return [];
-// }
-// async function showDiff (a: Duplications[], b: string) {
-// let asource = a[0].source;
-// let auri = Uri.parse(asource.sourceId);
-// let buri = Uri.parse(b);
-// let [adocOpen, bdocOpen] = await Promise.all([workspace.openTextDocument(auri), workspace.openTextDocument(buri)]);
-// let [adoc, bdoc] = await Promise.all([window.showTextDocument(adocOpen, ViewColumn.One), window.showTextDocument(bdocOpen, ViewColumn.Two)]);
-// let arange = new Range(a.source.start.line, a.source.range[0], a.source.end.line, a.source.range[1]);
-// let brange = new Range(b.source.start.line, b.source.range[0], b.source.end.line, b.source.range[1]);
-// adoc.setDecorations(decoration, setDecorationOptions(a, b));
-// bdoc.setDecorations(decoration, setDecorationOptions(b, a));
-// adoc.revealRange(arange);
-// bdoc.revealRange(brange);
-// }
+const combine_1 = __webpack_require__(/*! ../utils/combine */ "./src/utils/combine.ts");
+const duplication_1 = __webpack_require__(/*! ../utils/duplication */ "./src/utils/duplication.ts");
+const decoration = vscode_1.window.createTextEditorDecorationType({
+    backgroundColor: "rgba(255,0,0,0.3)"
+});
+function showDiff(a, b) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let auri = vscode_1.Uri.parse(a.filename);
+        let buri = vscode_1.Uri.parse(b.filename);
+        let [adocOpen, bdocOpen] = yield Promise.all([vscode_1.workspace.openTextDocument(auri), vscode_1.workspace.openTextDocument(buri)]);
+        let [adoc, bdoc] = yield Promise.all([vscode_1.window.showTextDocument(adocOpen, vscode_1.ViewColumn.One), vscode_1.window.showTextDocument(bdocOpen, vscode_1.ViewColumn.Two)]);
+        let arange = new vscode_1.Range(a.start.line - 1, a.start.col - 1, a.end.line - 1, a.end.col - 1);
+        let brange = new vscode_1.Range(b.start.line - 1, b.start.col - 1, b.end.line - 1, b.end.col - 1);
+        adoc.setDecorations(decoration, [{
+                range: arange,
+                hoverMessage: `Matchs ${a.filename}:${b.filename}`
+            }]);
+        bdoc.setDecorations(decoration, [{
+                range: brange,
+                hoverMessage: `Matchs ${b.filename}:${a.filename}`
+            }]);
+        adoc.revealRange(arange);
+        bdoc.revealRange(brange);
+    });
+}
+function removeroot(p, root) {
+    if (root === undefined) {
+        return p;
+    }
+    return p.replace(new RegExp(`^${root}/`, 'i'), '');
+}
 function QuickPick(context, f, provider, config) {
     context.subscriptions.push(vscode_1.commands.registerCommand('extension.duplication', () => __awaiter(this, void 0, void 0, function* () {
-        var _a;
-        let sets = new Set();
-        // let clones = await f.getClones();
-        // await provider.onChanges(clones);
-        // clones.forEach((item) => {
-        //   let keys = [
-        //     item.duplicationA.sourceId,
-        //     item.duplicationB.sourceId
-        //   ];
-        //   keys.sort();
-        //   sets.add({
-        //     label: keys.map(key => key.replace(`${config.root}/` || '', '')).join(` <=> `),
-        //     description: keys.join(` <=> `)
-        //   });
-        // });
-        let find = yield vscode_1.window.showQuickPick([...sets]);
+        let p = [...f.paths];
+        let combines = combine_1.arrayCombine(p, 2);
+        let diff = duplication_1.dup(combines, f.datas, config.minTokens);
+        let picks = diff.map((item) => {
+            return Object.assign({ label: `${removeroot(item.a.filename, config.root)}:${item.a.start.line} <==> ${removeroot(item.b.filename, config.root)}:${item.b.start.line}` }, item);
+        });
+        let find = yield vscode_1.window.showQuickPick(picks);
         if (!find) {
             return;
         }
-        let keys = (_a = find.description) === null || _a === void 0 ? void 0 : _a.split(' <=> ');
-        if (!keys) {
-            return;
-        }
-        let ak = keys[0];
-        let bk = keys[1];
-        vscode_1.commands.executeCommand('vscode.diff', vscode_1.Uri.parse(ak), vscode_1.Uri.parse(bk), find.label);
-        // let a = getDuplication(ak, clones);
-        // showDiff(a, bk);
+        showDiff(find.a, find.b);
     })));
 }
 exports.QuickPick = QuickPick;
+
+
+/***/ }),
+
+/***/ "./src/utils/combine.ts":
+/*!******************************!*\
+  !*** ./src/utils/combine.ts ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.filterByPath = exports.getFlagArrs = exports.arrayCombine = void 0;
+// from http://jimyuan.github.io/blog/2019/04/03/combination-algorithm-with-js.html
+// 改良
+// 文件名分组 所有组合
+/**
+ * 获得指定数组的所有组合
+ */
+function arrayCombine(targetArr = [], count = 1) {
+    if (!Array.isArray(targetArr)) {
+        return [];
+    }
+    ;
+    const resultArrs = [];
+    // 所有组合的 01 排列
+    const flagArrs = getFlagArrs(targetArr.length, count);
+    while (flagArrs.length) {
+        const flag = flagArrs.shift();
+        if (!flag) {
+            continue;
+        }
+        let reg = /1/g;
+        let match;
+        let res = [];
+        while (match = reg.exec(flag), match !== null) {
+            res.push(targetArr[match.index]);
+        }
+        ;
+        resultArrs.push(res);
+    }
+    return resultArrs;
+}
+exports.arrayCombine = arrayCombine;
+// console.log(arrayCombine(['爱上邓丽君', '萨顶顶', '得到的', '对的'], 3));
+// console.log(arrayCombine(['爱上邓丽君', '萨顶顶', '得到的', '对的'], 2));
+// console.log(arrayCombine(['爱上邓丽君', '萨顶顶', '得到的', '对的'], 1));
+/**
+ * 获得从 m 中取 n 的所有组合
+ * 思路如下：
+ * 生成一个长度为 m 的数组，
+ * 数组元素的值为 1 表示其下标代表的数被选中，为 0 则没选中。
+ *
+ * 1. 初始化数组，前 n 个元素置 1，表示第一个组合为前 n 个数；
+ * 2. 从左到右扫描数组元素值的 “10” 组合，找到第一个 “10” 组合后将其变为 “01” 组合；
+ * 3. 将其左边的所有 “1” 全部移动到数组的最左端
+ * 4. 当 n 个 “1” 全部移动到最右端时（没有 “10” 组合了），得到了最后一个组合。
+ */
+function getFlagArrs(m, n = 1) {
+    if (n < 1 || m < n) {
+        return [];
+    }
+    ;
+    // 先生成一个长度为 m 字符串，开头为 n 个 1， 例如“11100”
+    let str = '1'.repeat(n) + '0'.repeat(m - n);
+    // 1
+    const resultArrs = [str];
+    const reg = /10/;
+    while (reg.test(str)) {
+        str = str.replace(reg, '01');
+        resultArrs.push(str);
+    }
+    return resultArrs;
+}
+exports.getFlagArrs = getFlagArrs;
+// 获取指定文件的所有组合
+function filterByPath(groups, filepath) {
+    let res = [];
+    for (let index = 0; index < groups.length; index++) {
+        const element = groups[index];
+        if (element[0] === filepath) {
+            let [e, b] = element;
+            res.push([e, b]);
+        }
+        else if (element[1] === filepath) {
+            let [e, b] = element;
+            res.push([b, e]);
+        }
+    }
+    return res;
+}
+exports.filterByPath = filterByPath;
 
 
 /***/ }),
@@ -9799,13 +9871,9 @@ class Config {
         return vscode_1.workspace.getConfiguration()
             .get('duplication.minTokens') || 50;
     }
-    get maxLines() {
+    get debounceWait() {
         return vscode_1.workspace.getConfiguration()
-            .get('duplication.maxLines') || 10000;
-    }
-    get minLines() {
-        return vscode_1.workspace.getConfiguration()
-            .get('duplication.minLines') || 5;
+            .get('duplication.debounceWait') || 200;
     }
     get maxSize() {
         return vscode_1.workspace.getConfiguration()
@@ -9817,18 +9885,101 @@ class Config {
     }
     get watch() {
         return vscode_1.workspace.getConfiguration()
-            .get('duplication.watch') || false;
+            .get('duplication.watch') || true;
     }
     get severity() {
         return vscode_1.workspace.getConfiguration()
             .get('duplication.severity') || 1;
     }
-    get formatsExts() {
-        return vscode_1.workspace.getConfiguration()
-            .get('duplication.formatsExts') || {};
-    }
 }
 exports.Config = Config;
+
+
+/***/ }),
+
+/***/ "./src/utils/duplication.ts":
+/*!**********************************!*\
+  !*** ./src/utils/duplication.ts ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.dup = exports.dupo = void 0;
+function dupo(afilename, bfilename, datas, maxlen = 50) {
+    let afile = datas[afilename];
+    let bfile = datas[bfilename];
+    if (!afile || !bfile) {
+        return [];
+    }
+    let atokens = afile.tokens || [];
+    let btokens = bfile.tokens || [];
+    let m = atokens.length;
+    let n = btokens.length;
+    let arr = [];
+    for (let i = 0; i < m + 1; i++) {
+        for (let j = 0; j < n + 1; j++) {
+            arr[i] = arr[i] || [];
+            // 第一行第一列 置0
+            if (i === 0 || j === 0) {
+                arr[i][j] = 0;
+            }
+            else if (atokens[i] && btokens[j]
+                && atokens[i - 1] && btokens[j - 1]
+                && atokens[i].value === btokens[j].value
+                && atokens[i - 1].value === btokens[j - 1].value) {
+                arr[i][j] = arr[i - 1][j - 1] + 1;
+                arr[i - 1][j - 1] = 0;
+            }
+            else {
+                arr[i][j] = 0;
+            }
+        }
+    }
+    let res = [];
+    for (let i = 0; i < m + 1; i++) {
+        for (let j = 0; j < n + 1; j++) {
+            if (arr[i][j] >= maxlen) {
+                let end = arr[i][j];
+                let aendtoken = atokens[i];
+                let bendtoken = btokens[j];
+                let astarttoken = atokens[i - end];
+                let bstarttoken = btokens[j - end];
+                let diff = {
+                    a: {
+                        filename: aendtoken.filename,
+                        start: astarttoken.start,
+                        value: afile.content.slice(astarttoken.start.pos, aendtoken.end.pos),
+                        end: aendtoken.end
+                    },
+                    b: {
+                        filename: bendtoken.filename,
+                        start: bstarttoken.start,
+                        value: bfile.content.slice(bstarttoken.start.pos, bendtoken.end.pos),
+                        end: bendtoken.end
+                    }
+                };
+                res.push(diff);
+            }
+        }
+    }
+    return res;
+}
+exports.dupo = dupo;
+function dup(combine, datas, maxlen = 50) {
+    let res = [];
+    for (let index = 0; index < combine.length; index++) {
+        const element = combine[index];
+        let items = dupo(element[0], element[1], datas, maxlen);
+        if (items.length) {
+            Array.prototype.push.apply(res, items);
+        }
+    }
+    return res;
+}
+exports.dup = dup;
 
 
 /***/ }),
@@ -9858,6 +10009,7 @@ const globby = __webpack_require__(/*! globby */ "./node_modules/globby/index.js
 const bytes = __webpack_require__(/*! bytes */ "./node_modules/bytes/index.js");
 const eventemitter3 = __webpack_require__(/*! eventemitter3 */ "./node_modules/eventemitter3/index.js");
 const debounce_1 = __webpack_require__(/*! lodash-es/debounce */ "./node_modules/lodash-es/debounce.js");
+const tokenizer_1 = __webpack_require__(/*! ./tokenizer */ "./src/utils/tokenizer.ts");
 class Files extends eventemitter3 {
     constructor(config) {
         super();
@@ -9889,7 +10041,7 @@ class Files extends eventemitter3 {
                 expandDirectories: true
             });
             if (this.config.watch === true) {
-                this.watch = index_1.watch(`${this.config.root}/**/*`, debounce_1.default(this.update.bind(this)), this.config);
+                this.watch = index_1.watch(`${this.config.root}/**/*`, debounce_1.default(this.update.bind(this), this.config.debounceWait), this.config);
             }
             console.timeEnd('globby');
             yield this.reads(paths);
@@ -9925,8 +10077,10 @@ class Files extends eventemitter3 {
                 return;
             }
             let nf = Object.assign(Object.assign({}, file), obj);
+            let tokenizer = new tokenizer_1.Tokenizer(nf.content, filepath);
+            tokenizer.exec();
             if (file) {
-                this.save(filepath, nf);
+                this.save(filepath, Object.assign(Object.assign({}, nf), { tokens: tokenizer.tokens }));
             }
         });
     }
@@ -9946,11 +10100,6 @@ class Files extends eventemitter3 {
         }
         this.paths.delete(filepath);
         delete this.datas[filepath];
-    }
-    clones() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return [];
-        });
     }
     update(rootpath, event, filepath, stats) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -9991,7 +10140,7 @@ class Files extends eventemitter3 {
     }
     _read(filepath) {
         return __awaiter(this, void 0, void 0, function* () {
-            let f = yield index_1.read(filepath, this.config);
+            let f = yield index_1.read(filepath);
             if (f === undefined) {
                 return;
             }
@@ -9999,10 +10148,12 @@ class Files extends eventemitter3 {
                 return;
             }
             this.paths.add(filepath);
+            let tokenizer = new tokenizer_1.Tokenizer(f.content, filepath);
+            tokenizer.exec();
             return this.save(filepath, {
                 filepath: f.filepath,
                 content: f.content,
-                tokens: f.tokens
+                tokens: tokenizer.tokens
             });
         });
     }
@@ -10031,26 +10182,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.filterByPath = exports.getFlagArrs = exports.arrayCombine = exports.exec = exports.execAsync = exports.hasOwnProperty = exports.watch = exports.read = void 0;
+exports.exec = exports.execAsync = exports.hasOwnProperty = exports.watch = exports.read = void 0;
 const fs = __webpack_require__(/*! fs */ "fs");
 const pify = __webpack_require__(/*! pify */ "./node_modules/pify/index.js");
 const chokidar = __webpack_require__(/*! chokidar */ "chokidar");
-const tokenizer_1 = __webpack_require__(/*! ./tokenizer */ "./src/utils/tokenizer.ts");
 const perf_hooks_1 = __webpack_require__(/*! perf_hooks */ "perf_hooks");
-function read(filepath, config) {
+function read(filepath) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             let [stats, content] = yield Promise.all([
                 pify(fs.stat)(filepath),
                 pify(fs.readFile)(filepath, 'utf-8')
             ]);
-            let tokenizer = new tokenizer_1.Tokenizer(content, filepath, config.minTokens);
-            tokenizer.exec();
             return {
                 filepath,
                 content,
-                stats,
-                tokens: tokenizer.tokens
+                stats
             };
         }
         catch (error) {
@@ -10118,70 +10265,7 @@ function exec(fn) {
     };
 }
 exports.exec = exec;
-// from http://jimyuan.github.io/blog/2019/04/03/combination-algorithm-with-js.html
-// 改良
-// 文件名分组 所有组合
-/**
- * 获得指定数组的所有组合
- */
-function arrayCombine(targetArr = [], count = 1) {
-    if (!Array.isArray(targetArr)) {
-        return [];
-    }
-    ;
-    const resultArrs = [];
-    // 所有组合的 01 排列
-    const flagArrs = getFlagArrs(targetArr.length, count);
-    while (flagArrs.length) {
-        const flag = flagArrs.shift();
-        if (!flag) {
-            continue;
-        }
-        let reg = /1/g;
-        let match;
-        let res = [];
-        while (match = reg.exec(flag), match !== null) {
-            res.push(targetArr[match.index]);
-        }
-        ;
-        resultArrs.push(res);
-    }
-    return resultArrs;
-}
-exports.arrayCombine = arrayCombine;
-/**
- * 获得从 m 中取 n 的所有组合
- * 思路如下：
- * 生成一个长度为 m 的数组，
- * 数组元素的值为 1 表示其下标代表的数被选中，为 0 则没选中。
- *
- * 1. 初始化数组，前 n 个元素置 1，表示第一个组合为前 n 个数；
- * 2. 从左到右扫描数组元素值的 “10” 组合，找到第一个 “10” 组合后将其变为 “01” 组合；
- * 3. 将其左边的所有 “1” 全部移动到数组的最左端
- * 4. 当 n 个 “1” 全部移动到最右端时（没有 “10” 组合了），得到了最后一个组合。
- */
-function getFlagArrs(m, n = 1) {
-    if (n < 1 || m < n) {
-        return [];
-    }
-    ;
-    // 先生成一个长度为 m 字符串，开头为 n 个 1， 例如“11100”
-    let str = '1'.repeat(n) + '0'.repeat(m - n);
-    // 1
-    const resultArrs = [str];
-    const reg = /10/;
-    while (reg.test(str)) {
-        str = str.replace(reg, '01');
-        resultArrs.push(str);
-    }
-    return resultArrs;
-}
-exports.getFlagArrs = getFlagArrs;
-// 获取指定文件的所有组合
-function filterByPath(groups, filepath) {
-    return [];
-}
-exports.filterByPath = filterByPath;
+// 暂时不使用, 采用动态规划 计算相同代码
 function murmurhash3(key, seed) {
     let remainder = key.length & 3; // key.length % 4
     let bytes = key.length - remainder;
@@ -10245,7 +10329,7 @@ let space_reg = /^\s+/;
 // 字符串
 let string_reg = /^([\'\"\`]+)(?<value>(?:[^\1])*?)\1/;
 // 其他token
-let other_reg = /^.+?(?=\s)/;
+let other_reg = /^[^\s\'\"\']+/;
 let n_reg = /\n/;
 let any_reg = /^.+/;
 function tokenizer_generator(start, end, value, filename) {
@@ -10257,10 +10341,9 @@ function tokenizer_generator(start, end, value, filename) {
     };
 }
 class Tokenizer {
-    constructor(input = '', filename, k = 50) {
+    constructor(input = '', filename) {
         this.input = input;
         this.filename = filename;
-        this.k = k;
         this.tokens = [];
         this.input = input;
         this.source = input;
@@ -10269,7 +10352,6 @@ class Tokenizer {
         this.pos = 0;
         this.line = 1;
         this.col = 1;
-        this.k = k;
     }
     exec() {
         this.next_all();

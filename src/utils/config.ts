@@ -24,13 +24,9 @@ export class Config {
     return workspace.getConfiguration()
       .get<number>('duplication.minTokens') || 50;
   }
-  get maxLines (): number {
+  get debounceWait (): number {
     return workspace.getConfiguration()
-      .get<number>('duplication.maxLines') || 10000;
-  }
-  get minLines (): number {
-    return workspace.getConfiguration()
-      .get<number>('duplication.minLines') || 5;
+      .get<number>('duplication.debounceWait') || 200;
   }
   get maxSize (): string {
     return workspace.getConfiguration()
@@ -42,16 +38,10 @@ export class Config {
   }
   get watch (): boolean {
     return workspace.getConfiguration()
-      .get<boolean>('duplication.watch') || false;
+      .get<boolean>('duplication.watch') || true;
   }
   get severity (): DiagnosticSeverity {
     return workspace.getConfiguration()
       .get<DiagnosticSeverity>('duplication.severity') || 1;
-  }
-  get formatsExts (): {
-    [key: string]: string[]
-  } | {} {
-    return workspace.getConfiguration()
-      .get<boolean>('duplication.formatsExts') || {};
   }
 }

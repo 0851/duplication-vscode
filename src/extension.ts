@@ -9,18 +9,9 @@ import {
 } from 'vscode';
 import { Files } from './utils/files';
 import { Config } from './utils/config';
-import { arrayCombine } from './utils';
 import { Provider } from './provides/index';
 import { QuickPick } from './provides/quickpick';
 import debounce from 'lodash-es/debounce';
-import { IFileData, IFile, IToken } from './index.d';
-
-
-// import { spawn, Thread, Worker, Pool } from "threads";
-// import * as  os from 'os';
-// let size = os.cpus().length || 8;
-// let pool = Pool(() => spawn(new Worker("./worker.js")), size);
-
 
 // 关闭最大监听数限制, worker 任务时会超过
 process.setMaxListeners(0);
@@ -40,22 +31,11 @@ async function init (f: Files, provider: Provider, config: Config) {
     cancellable: false
   }, async (progress, token: CancellationToken) => {
     try {
-      console.time('time');
       await f.exec();
-      console.timeEnd('time');
       if (!f.datas) {
         provider.stop();
         return;
       };
-      // console.time("pool");
-      // let set = [];
-      // Object.keys(f.shingles).forEach((shingle) => {
-      //   if (f.shingles[shingle].length > 1) {
-      //     set.push(f.shingles[shingle]);
-      //   }
-      // });
-      // console.log(set);
-      // console.timeEnd('pool');
       await provider.onChanges();
     } catch (error) {
       console.error(error);
@@ -74,23 +54,16 @@ export async function activate (context: ExtensionContext) {
 
   await init(f, provider, config);
 
-  console.time('arrayCombine');
-  let combines = arrayCombine([...f.paths], 2);
-  console.timeEnd('arrayCombine');
-
-  console.log(combines);
-
-  context.subscriptions.push(workspace.onDidChangeWorkspaceFolders(debounce(async () => { await init(f, provider, config); })));
-  context.subscriptions.push(workspace.onDidChangeConfiguration(debounce(async () => { await init(f, provider, config); })));
+  context.subscriptions.push(workspace.onDidChangeWorkspaceFolders(debounce(async () => { await init(f, provider, config); }, config.debounceWait)));
+  context.subscriptions.push(workspace.onDidChangeConfiguration(debounce(async () => { await init(f, provider, config); }, config.debounceWait)));
 
   context.subscriptions.push(workspace.onDidChangeTextDocument(
     debounce(async (event: TextDocumentChangeEvent) => {
       let fp = event.document.uri.path;
       let content = event.document.getText();
       await f.put(fp, { content: content });
-      // 性能问题 暂时屏蔽
-      // provider.onChange(fp);
-    })
+      provider.onChange(fp);
+    }, config.debounceWait)
   ));
 
   context.subscriptions.push(window.onDidChangeActiveTextEditor(
@@ -101,9 +74,8 @@ export async function activate (context: ExtensionContext) {
       let fp = editor.document.uri.path;
       let content = editor.document.getText();
       await f.put(fp, { content: content });
-      // 性能问题 暂时屏蔽
-      // provider.onChange(fp);
-    })
+      provider.onChange(fp);
+    }, config.debounceWait)
   ));
 
   QuickPick(context, f, provider, config);

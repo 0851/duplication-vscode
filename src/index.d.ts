@@ -1,11 +1,9 @@
-import * as fs from 'fs';
 export interface IFileData {
-  [filepath: string]: IFile
+  [filepath: string]: IFile & {
+    tokens: IToken[]
+  }
 }
-export interface IClone {
-  a: IToken
-  b: IToken
-}
+
 export interface IDebouncedFunc<T extends (...args: any[]) => any> {
   (...args: Parameters<T>): ReturnType<T> | undefined;
   cancel (): void;
@@ -15,7 +13,6 @@ export interface IDebouncedFunc<T extends (...args: any[]) => any> {
 export interface IFile {
   filepath: string
   content: string
-  tokens: IToken[]
 }
 
 export interface IToken {
@@ -33,3 +30,8 @@ export interface ILoc {
 export type IShingles = {
   [hashcode: string]: IToken[]
 };
+
+export interface IDuplication {
+  a: IToken,
+  b: IToken
+}

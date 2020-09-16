@@ -6,7 +6,7 @@ import * as bytes from 'bytes';
 import { Config } from './config';
 import * as eventemitter3 from 'eventemitter3';
 import debounce from 'lodash-es/debounce';
-import { IToken, IClone, IFile, IFileData, IShingles } from '../index.d';
+import { IToken, IFile, IFileData, IShingles } from '../index.d';
 import { Tokenizer } from './tokenizer';
 
 
@@ -41,7 +41,7 @@ export class Files extends eventemitter3 {
       expandDirectories: true
     });
     if (this.config.watch === true) {
-      this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this)), this.config);
+      this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this), this.config.debounceWait), this.config);
     }
     console.timeEnd('globby');
     await this.reads(paths);
@@ -75,8 +75,13 @@ export class Files extends eventemitter3 {
       ...file,
       ...obj
     };
+    let tokenizer = new Tokenizer(nf.content, filepath);
+    tokenizer.exec();
     if (file) {
-      this.save(filepath, nf);
+      this.save(filepath, {
+        ...nf,
+        tokens: tokenizer.tokens
+      });
     }
   }
   clear (): void {
@@ -84,7 +89,9 @@ export class Files extends eventemitter3 {
       return this.remove(key);
     });
   }
-  save (filepath: string, item: IFile): IFile {
+  save (filepath: string, item: IFile & {
+    tokens: IToken[]
+  }): IFile {
     this.datas[filepath] = item;
     return item;
   }
@@ -95,9 +102,6 @@ export class Files extends eventemitter3 {
     }
     this.paths.delete(filepath);
     delete this.datas[filepath];
-  }
-  async clones (): Promise<IClone[]> {
-    return [];
   }
   async update (rootpath: string, event: WatchEventName, filepath: string, stats?: fs.Stats): Promise<void> {
     if (event === 'unlink' || event === 'error') {
@@ -133,7 +137,7 @@ export class Files extends eventemitter3 {
     return false;
   }
   async _read (filepath: string): Promise<IFile | undefined> {
-    let f = await read(filepath, this.config);
+    let f = await read(filepath);
     if (f === undefined) {
       return;
     }
@@ -141,10 +145,12 @@ export class Files extends eventemitter3 {
       return;
     }
     this.paths.add(filepath);
+    let tokenizer = new Tokenizer(f.content, filepath);
+    tokenizer.exec();
     return this.save(filepath, {
       filepath: f.filepath,
       content: f.content,
-      tokens: f.tokens
+      tokens: tokenizer.tokens
     });
   }
 }
