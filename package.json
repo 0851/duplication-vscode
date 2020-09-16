@@ -95,9 +95,7 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"chokidar": "^3.4.0",
-		"threads": "^1.6.3",
-		"tiny-worker": "^2.3.0"
+		"chokidar": "^3.4.0"
 	},
 	"devDependencies": {
 		"@babel/types": "^7.11.5",

@@ -10,9 +10,9 @@
 		"outDir": "out",
 		"strict": true
 	},
-	"include": [
-		"node_modules/threads/dist/index.d.ts"
-	],
+	// "include": [
+	// "node_modules/threads/dist/index.d.ts"
+	// ],
 	"exclude": [
 		"google/",
 		"dist/"

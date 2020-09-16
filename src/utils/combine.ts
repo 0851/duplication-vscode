@@ -9,6 +9,11 @@ export function arrayCombine (targetArr: string[] = [], count = 1): string[][] {
   if (!Array.isArray(targetArr)) { return []; };
 
   const resultArrs = [];
+  // 添加自身做为对比对象
+  for (let index = 0; index < targetArr.length; index++) {
+    const element = targetArr[index];
+    resultArrs.push([element, element]);
+  }
   // 所有组合的 01 排列
   const flagArrs = getFlagArrs(targetArr.length, count);
   while (flagArrs.length) {

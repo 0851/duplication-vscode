@@ -60,6 +60,9 @@ export class Provider {
         diagnostics.push(diagnostic);
       }
     });
+    if (diagnostics.length <= 0) {
+      return;
+    }
     this.diagnosticCollection.set(uri, diagnostics);
   }
   async _onChange (filename: string): Promise<void> {

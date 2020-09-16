@@ -3,6 +3,11 @@ import { IToken, ILoc } from '../index.d';
 let space_reg = /^\s+/;
 // 字符串
 let string_reg = /^([\'\"\`]+)(?<value>(?:[^\1])*?)\1/;
+
+let key_reg = /^[a-zA-Z0-9\$\_][a-zA-Z0-9\_\-\$]*/;
+
+let sym_reg = /^[\`\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\'\"\;\:\,\.\/\<\>\?]*/;
+
 // 其他token
 let other_reg = /^[^\s\'\"\']+/;
 
@@ -91,6 +96,12 @@ class Tokenizer {
     let start_loc = this.get_loc();
 
     let v = this.by_reg(string_reg);
+    if (!v) {
+      v = this.by_reg(key_reg) || '';
+    }
+    if (!v) {
+      v = this.by_reg(sym_reg) || '';
+    }
     if (!v) {
       v = this.by_reg(other_reg) || '';
     }

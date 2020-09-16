@@ -17,12 +17,12 @@ export function dupo (afilename: string, bfilename: string, datas: IFileData, ma
       // 第一行第一列 置0
       if (i === 0 || j === 0) {
         arr[i][j] = 0;
-      } else if (
-        atokens[i] && btokens[j]
+      } else if (atokens[i - 1].filename === btokens[j - 1].filename && atokens[i - 1].start.pos === btokens[j - 1].start.pos) {//过滤掉相同文件的相同位置, 取不同位置
+        arr[i][j] = 0;
+      } else if (atokens[i] && btokens[j]
         && atokens[i - 1] && btokens[j - 1]
         && atokens[i].value === btokens[j].value
-        && atokens[i - 1].value === btokens[j - 1].value
-      ) {
+        && atokens[i - 1].value === btokens[j - 1].value) {
         arr[i][j] = arr[i - 1][j - 1] + 1;
         arr[i - 1][j - 1] = 0;
       } else {

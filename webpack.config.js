@@ -19,8 +19,8 @@ const config = {
   externals: {
     "vscode": "vscode",
     "chokidar": "chokidar",
-    "tiny-worker": "tiny-worker",
-    "threads": "threads"
+    // "tiny-worker": "tiny-worker",
+    // "threads": "threads"
   },
   resolve: {
     extensions: ['.ts', '.js']
