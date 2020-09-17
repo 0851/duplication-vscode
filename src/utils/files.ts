@@ -1,4 +1,3 @@
-
 import { read, watch, WatchEventName, hasOwnProperty } from './index';
 import * as fs from 'fs';
 import * as globby from 'globby';
@@ -6,14 +5,17 @@ import * as bytes from 'bytes';
 import { Config } from './config';
 import * as eventemitter3 from 'eventemitter3';
 import debounce from 'lodash-es/debounce';
-import { IToken, IFile, IFileData, IShingles } from '../index.d';
 import { Tokenizer } from './tokenizer';
+import { IFile, IFileData, IShingles, IPathGroup } from '../index.d';
+
 
 
 export class Files extends eventemitter3 {
   datas: IFileData;
   watch: (() => Promise<void>) | undefined;
-  paths: Set<string> = new Set();
+  _paths: Set<string> = new Set();
+  paths: string[] = [];
+  groups: IPathGroup = {};
   shingles: IShingles = {};
   constructor (public config: Config) {
     super();
@@ -52,13 +54,15 @@ export class Files extends eventemitter3 {
   };
   async reads (filepaths: string[]): Promise<void> {
     console.time('reads');
-    await Promise.all(filepaths.map((filepath) => this.read(filepath)));
+    await Promise.all(filepaths.map((filepath) => this._read(filepath, false)));
     console.timeEnd('reads');
+    this.pathGroupGenerator();
   }
   removes (filepaths: string[]): void {
     filepaths.map((filepath) => {
-      return this.remove(filepath);
+      return this._remove(filepath, false);
     });
+    this.pathGroupGenerator();
   }
   has (filepath: string): boolean {
     return hasOwnProperty(this.datas, filepath);
@@ -78,42 +82,54 @@ export class Files extends eventemitter3 {
     let tokenizer = new Tokenizer(nf.content, filepath);
     tokenizer.exec();
     if (file) {
-      this.save(filepath, {
+      let item = {
         ...nf,
         tokens: tokenizer.tokens
-      });
+      };
+      this.datas[filepath] = item;
     }
   }
   clear (): void {
     Object.keys(this.datas).map((key) => {
-      return this.remove(key);
+      return this._remove(key, false);
     });
+    this.pathGroupGenerator();
   }
-  save (filepath: string, item: IFile & {
-    tokens: IToken[]
-  }): IFile {
-    this.datas[filepath] = item;
-    return item;
+  pathGroupGenerator () {
+    console.time('pathGroupGenerator');
+    let paths = [...this._paths];
+    let groups: IPathGroup = {};
+    for (let index = 0; index < paths.length; index++) {
+      const element = paths[index];
+      groups[element] = paths.map((d) => [element, d]);
+    }
+    this.paths = paths;
+    this.groups = groups;
+    console.timeEnd('pathGroupGenerator');
   }
   remove (filepath: string): void {
+    this._remove(filepath);
+  }
+  _remove (filepath: string, m: boolean = true) {
     let item = this.datas[filepath];
     if (!item) {
       return;
     }
-    this.paths.delete(filepath);
     delete this.datas[filepath];
+    this._paths.delete(filepath);
+    if (m === true) {
+      this.pathGroupGenerator();
+    }
   }
   async update (rootpath: string, event: WatchEventName, filepath: string, stats?: fs.Stats): Promise<void> {
     if (event === 'unlink' || event === 'error') {
-      this.remove(filepath);
+      this._remove(filepath, false);
     }
-    await this._read(filepath);
+    await this._read(filepath, false);
+    this.pathGroupGenerator();
     this.emit('update');
   }
   async read (key: string): Promise<IFile | undefined> {
-    if (this.datas[key]) {
-      return this.datas[key];
-    }
     return await this._read(key);
   }
   skipBigFiles (entry: IFile & { stats: fs.Stats }): boolean {
@@ -136,7 +152,10 @@ export class Files extends eventemitter3 {
     }
     return false;
   }
-  async _read (filepath: string): Promise<IFile | undefined> {
+  async _read (filepath: string, m: boolean = true): Promise<IFile | undefined> {
+    if (this.datas[filepath]) {
+      return this.datas[filepath];
+    }
     let f = await read(filepath);
     if (f === undefined) {
       return;
@@ -144,13 +163,18 @@ export class Files extends eventemitter3 {
     if (this.skip(f) === true) {
       return;
     }
-    this.paths.add(filepath);
+    this._paths.add(filepath);
     let tokenizer = new Tokenizer(f.content, filepath);
     tokenizer.exec();
-    return this.save(filepath, {
+    let item = {
       filepath: f.filepath,
       content: f.content,
       tokens: tokenizer.tokens
-    });
+    };
+    this.datas[filepath] = item;
+    if (m === true) {
+      this.pathGroupGenerator();
+    }
+    return item;
   }
 }

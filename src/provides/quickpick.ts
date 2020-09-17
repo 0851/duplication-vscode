@@ -45,7 +45,7 @@ function removeroot (p: string, root: string | undefined): string {
 }
 export function QuickPick (context: ExtensionContext, f: Files, provider: Provider, config: Config) {
   context.subscriptions.push(commands.registerCommand('extension.duplication', async () => {
-    let p = [...f.paths];
+    let p = f.paths;
     let combines = arrayCombine(p, 2);
     let diff = dup(combines, f.datas, config.minTokens);
     let picks = diff.map((item) => {

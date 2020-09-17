@@ -10,7 +10,6 @@ import { Config } from '../utils/config';
 import { IDebouncedFunc } from '../index.d';
 import debounce from 'lodash-es/debounce';
 export const CODE_ACTION = 'goto-duplication';
-import { arrayCombine, filterByPath } from '../utils/combine';
 import { dup } from '../utils/duplication';
 
 export class Provider {
@@ -29,23 +28,19 @@ export class Provider {
   }
   async _onChanges (): Promise<void> {
     this.diagnosticCollection.clear();
-    console.time('changes');
-    let p = [...this.file.paths];
-    let combines = arrayCombine(p, 2);
+    let p = this.file.paths;
     let actions = [];
-    while (p.length) {
-      let filename = p.shift();
-      if (!filename) {
-        return;
-      }
+    console.time('changes');
+    for (let index = 0; index < p.length; index++) {
+      const filename = p[index];
       let uri = Uri.parse(filename);
-      actions.push(this.setone(filename, uri, combines));
+      actions.push(this.setone(filename, uri));
     }
     await Promise.all(actions);
     console.timeEnd('changes');
   }
-  async setone (filename: string, uri: Uri, combines: string[][]): Promise<void> {
-    let comb = filterByPath(combines, filename);
+  async setone (filename: string, uri: Uri): Promise<void> {
+    let comb = this.file.groups[filename];
     if (comb.length <= 0) {
       return;
     }
@@ -69,9 +64,7 @@ export class Provider {
     console.time('change');
     let uri = Uri.parse(filename);
     this.diagnosticCollection.delete(uri);
-    let p = [...this.file.paths];
-    let combines = arrayCombine(p, 2);
-    await this.setone(filename, uri, combines);
+    await this.setone(filename, uri);
     console.timeEnd('change');
   }
   // 停止比对文件

@@ -4,6 +4,10 @@ export interface IFileData {
   }
 }
 
+export interface IPathGroup {
+  [key: string]: [string, string][]
+}
+
 export interface IDebouncedFunc<T extends (...args: any[]) => any> {
   (...args: Parameters<T>): ReturnType<T> | undefined;
   cancel (): void;
