@@ -27,18 +27,21 @@ export class Config {
   }
   get ignore (): string[] {
     return this.data['duplication.ignore'] || [
-      'node_modules/**/*',
-      'bower_components',
-      'jspm_packages',
-      'web_modules',
-      '.cache',
-      '.history',
-      '.yarn/cache',
-      '.vscode-test',
-      'out',
-      'dist',
-      'build',
-      'logs'
+      "node_modules/**/*",
+      "bower_components",
+      "jspm_packages",
+      "web_modules",
+      ".cache",
+      ".history",
+      ".yarn/cache",
+      ".vscode-test",
+      ".idea",
+      ".vscode",
+      ".git",
+      "out",
+      "dist",
+      "build",
+      "logs"
     ];
   }
   get minTokens (): number {
