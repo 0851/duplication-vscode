@@ -7,7 +7,7 @@ const config = {
   target: 'node',
   entry: {
     'extension': './src/extension.ts',
-    // "worker": './src/worker.ts'
+    "server": "./src/server.ts"
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

@@ -1,79 +1,144 @@
-import { IFileData, IDuplication } from '../index.d';
-export function dupo (afilename: string, bfilename: string, datas: IFileData, maxlen: number = 50): IDuplication[] {
-  let afile = datas[afilename];
-  let bfile = datas[bfilename];
-  if (!afile || !bfile) {
-    return [];
+import { IDuplication, IFileToken, IToken } from '../index.d';
+import { FileUtil } from './files';
+import { filterCombine } from './combine';
+
+export function dupone (astringtokens: string[], bstringtokens: string[]): { [key: string]: number } {
+
+  let m = astringtokens.length;
+  let n = bstringtokens.length;
+  let map: { [key: string]: number } = {};
+  let at;
+  let bt;
+  let ata;
+  let bta;
+
+  for (let j = 0; j < n + 1; j++) {
+    for (let i = 0; i < m + 1; i++) {
+      at = astringtokens[i];
+      ata = astringtokens[i + 1];
+      bt = bstringtokens[j];
+      bta = bstringtokens[j + 1];
+      if (at && bt && ata && bta && at === bt && ata === bta) {
+        let n = `${i}_${j}`;
+        let pre = map[n] || 0;
+        map[`${i + 1}_${j + 1}`] = pre + 1;
+        if (pre > 0) {
+          delete map[n];
+        }
+      }
+    }
   }
-  let atokens = afile.tokens || [];
-  let btokens = bfile.tokens || [];
-  let m = atokens.length;
-  let n = btokens.length;
-  let res: IDuplication[] = [];
-
-  // let arr: number[][] = [];
-  // for (let i = 0; i < m + 1; i++) {
-  //   for (let j = 0; j < n + 1; j++) {
-  //     arr[i] = arr[i] || [];
-  //     // 第一行第一列 置0
-  //     if (i === 0 || j === 0) {
-  //       arr[i][j] = 0;
-  //     } else if (
-  //       atokens[i - 1].filename === btokens[j - 1].filename
-  //       && atokens[i - 1].start.pos === btokens[j - 1].start.pos
-  //     ) {
-  //       //过滤掉相同文件的相同位置, 取不同位置
-  //       arr[i][j] = 0;
-  //     } else if (atokens[i] && btokens[j]
-  //       && atokens[i - 1] && btokens[j - 1]
-  //       && atokens[i].value === btokens[j].value
-  //       && atokens[i - 1].value === btokens[j - 1].value) {
-  //       arr[i][j] = arr[i - 1][j - 1] + 1;
-  //       arr[i - 1][j - 1] = 0;
-  //     } else {
-  //       arr[i][j] = 0;
-  //     }
-  //   }
-  // }
-
-
-  // for (let i = 0; i < m + 1; i++) {
-  //   for (let j = 0; j < n + 1; j++) {
-  //     if (arr[i][j] >= maxlen) {
-  //       let end = arr[i][j];
-  //       let aendtoken = atokens[i];
-  //       let bendtoken = btokens[j];
-  //       let astarttoken = atokens[i - end];
-  //       let bstarttoken = btokens[j - end];
-  //       let diff = {
-  //         a: {
-  //           filename: aendtoken.filename,
-  //           start: astarttoken.start,
-  //           value: afile.content.slice(astarttoken.start.pos, aendtoken.end.pos),
-  //           end: aendtoken.end
-  //         },
-  //         b: {
-  //           filename: bendtoken.filename,
-  //           start: bstarttoken.start,
-  //           value: bfile.content.slice(bstarttoken.start.pos, bendtoken.end.pos),
-  //           end: bendtoken.end
-  //         }
-  //       };
-  //       res.push(diff);
-  //     }
-  //   }
-  // }
-
-  return res;
+  return map;
 }
-export function dup (combine: string[][], datas: IFileData, maxlen: number = 50): IDuplication[] {
+
+function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IToken[], maxlen: number): IDuplication[] {
   let res: IDuplication[] = [];
-  for (let index = 0; index < combine.length; index++) {
-    const element = combine[index];
-    let items = dupo(element[0], element[1], datas, maxlen);
-    if (items.length) {
-      Array.prototype.push.apply(res, items);
+  let keys = Object.keys(map);
+  let k = keys.length;
+  for (let index = 0; index < k; index++) {
+    const key = keys[index];
+    let end = map[key];
+    if (end >= maxlen) {
+      let ek = key.split('_');
+      let i = parseInt(ek[0]);
+      let j = parseInt(ek[1]);
+
+      let astarttoken = atokens[i - end];
+      let bstarttoken = btokens[j - end];
+      let aendtoken = atokens[i];
+      let bendtoken = btokens[j];
+
+      if (!aendtoken || !bstarttoken || !aendtoken || !bendtoken) {
+        continue;
+      }
+      if (astarttoken.filename !== aendtoken.filename || bstarttoken.filename !== bendtoken.filename) {
+        continue;
+      }
+
+      if (astarttoken.filename === bstarttoken.filename && astarttoken.start.pos === bstarttoken.start.pos) {
+        continue;
+      }
+
+      let diff = {
+        a: {
+          filename: aendtoken.filename,
+          start: astarttoken.start,
+          value: astarttoken.content.slice(astarttoken.start.pos, aendtoken.end.pos),
+          end: aendtoken.end
+        },
+        b: {
+          filename: bendtoken.filename,
+          start: bstarttoken.start,
+          value: bstarttoken.content.slice(bstarttoken.start.pos, bendtoken.end.pos),
+          end: bendtoken.end
+        }
+      };
+      res.push(diff);
     }
   }
   return res;
+}
+function _dup (comb: string[], file: FileUtil, maxlen: number): IDuplication[] {
+  let afile: IFileToken;
+  let bfile: IFileToken;
+  let datas = file.datas;
+  afile = datas[comb[0]];
+  bfile = datas[comb[1]];
+  let map = dupone(afile.stringtokens, bfile.stringtokens);
+  return makedup(map, afile.tokens, bfile.tokens, maxlen);
+}
+
+
+async function split (combs: string[][], file: FileUtil, maxlen: number): Promise<IDuplication[]> {
+  let comb;
+  let res: IDuplication[] = [];
+  while (comb = combs.shift()) {
+    let t = _dup(comb, file, maxlen);
+    Array.prototype.push.apply(res, t);
+  }
+  return res;
+}
+
+function sleep (time: number = 50) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve();
+    }, time);
+  });
+}
+async function dupeach (combines: string[][], file: FileUtil, maxlen: number): Promise<IDuplication[]> {
+  let allcombs = [...combines];
+  let res: IDuplication[] = [];
+  let actions = [];
+  while (allcombs.length) {
+    let combs = allcombs.splice(0, 10000);
+    actions.push((async (combs) => {
+      let t = await split(combs, file, maxlen);
+      Array.prototype.push.apply(res, t);
+    })(combs));
+  }
+  await Promise.all(actions);
+  // let comb;
+  // let combs = [...combines];
+  // let res: IDuplication[] = [];
+  // let count = 0;
+  // while (comb = combs.shift()) {
+  //   let t = _dup(comb, file, maxlen);
+  //   Array.prototype.push.apply(res, t);
+  //   count++;
+  //   if (count > 10000) {
+  //     count = 0;
+  //     await sleep();
+  //   }
+  // }
+  return res;
+}
+export async function dup (filename: string, file: FileUtil, maxlen: number): Promise<IDuplication[]> {
+  let combs = filterCombine(file.combines, filename);
+  return await dupeach(combs, file, maxlen);
+}
+
+export async function dupall (file: FileUtil, maxlen: number): Promise<IDuplication[]> {
+  let combs = file.combines;
+  return await dupeach(combs, file, maxlen);
 }

@@ -1,47 +1,62 @@
-import { workspace, DiagnosticSeverity } from 'vscode';
+import { IConnection, DocumentUri, DiagnosticSeverity } from 'vscode-languageserver';
+export const Command = "extension.duplication";
+export const StartCommand = `extension.duplicationstart`;
+export const LoadingHideCommand = 'duplication.showQuickPickLoadingHide';
+export const LoadingCommand = 'duplication.showQuickPickLoading';
+export const ShowQuickPickCommand = 'duplication.showQuickPick';
+export const ServerId = 'Language Server Duplication';
 export class Config {
-  get root (): string | undefined {
-    return (workspace.workspaceFolders || [])[0]?.uri?.path;
+  data: { [key: string]: any } = {};
+  constructor (public c: IConnection, public root: DocumentUri | null) {
+    this.c = c;
+    this.root = root;
+  }
+  async changeConfig () {
+    let keys = ['duplication.ignore',
+      'duplication.minTokens',
+      'duplication.debounceWait',
+      'duplication.maxSize',
+      'duplication.debug',
+      'duplication.watch',
+      'duplication.severity'
+    ];
+    await Promise.all(keys.map(async (key) => {
+      let s = await this.c.workspace.getConfiguration(key);
+      this.data[key] = s;
+    }));
   }
   get ignore (): string[] {
-    return workspace.getConfiguration()
-      .get<string[]>('duplication.ignore') || [
-        'node_modules/**/*',
-        'bower_components',
-        'jspm_packages',
-        'web_modules',
-        '.cache',
-        '.history',
-        '.yarn/cache',
-        '.vscode-test',
-        'out',
-        'dist',
-        'build',
-        'logs'
-      ];
+    return this.data['duplication.ignore'] || [
+      'node_modules/**/*',
+      'bower_components',
+      'jspm_packages',
+      'web_modules',
+      '.cache',
+      '.history',
+      '.yarn/cache',
+      '.vscode-test',
+      'out',
+      'dist',
+      'build',
+      'logs'
+    ];
   }
   get minTokens (): number {
-    return workspace.getConfiguration()
-      .get<number>('duplication.minTokens') || 50;
+    return this.data['duplication.minTokens'] || 50;
   }
   get debounceWait (): number {
-    return workspace.getConfiguration()
-      .get<number>('duplication.debounceWait') || 200;
+    return this.data['duplication.debounceWait'] || 500;
   }
   get maxSize (): string {
-    return workspace.getConfiguration()
-      .get<string>('duplication.maxSize') || '100kb';
+    return this.data['duplication.maxSize'] || '100kb';
   }
   get debug (): boolean {
-    return workspace.getConfiguration()
-      .get<boolean>('duplication.debug') || false;
+    return this.data['duplication.debug'] || false;
   }
   get watch (): boolean {
-    return workspace.getConfiguration()
-      .get<boolean>('duplication.watch') || true;
+    return this.data['duplication.watch'] || true;
   }
   get severity (): DiagnosticSeverity {
-    return workspace.getConfiguration()
-      .get<DiagnosticSeverity>('duplication.severity') || 1;
+    return this.data['duplication.severity'] || 2;
   }
 }

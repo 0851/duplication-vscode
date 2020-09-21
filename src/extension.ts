@@ -1,17 +1,18 @@
 
 import {
-  ExtensionContext, workspace,
-  TextDocumentChangeEvent,
-  TextEditor,
+  ExtensionContext,
   window,
-  ProgressLocation,
-  CancellationToken
+  OutputChannel,
+  workspace,
+  StatusBarItem,
+  StatusBarAlignment,
+  commands
 } from 'vscode';
-import { Files } from './utils/files';
-import { Config } from './utils/config';
-import { Provider } from './provides/index';
-import { QuickPick } from './provides/quickpick';
-import debounce from 'lodash-es/debounce';
+import { ServerOptions, TransportKind, LanguageClientOptions, LanguageClient } from 'vscode-languageclient';
+import { StartCommand, ServerId, LoadingHideCommand, LoadingCommand, ShowQuickPickCommand } from './utils/config';
+import * as path from 'path';
+import { IDuplication } from '.';
+import { quickPick } from './provides/quickpick';
 
 // 关闭最大监听数限制, worker 任务时会超过
 process.setMaxListeners(0);
@@ -20,66 +21,86 @@ process.on('unhandledRejection', error => {
 });
 
 
-//根目录改变, 配置改变时重新执行
-async function init (f: Files, provider: Provider, config: Config) {
-  if (!workspace.workspaceFolders) {
-    return undefined;
-  }
-  await window.withProgress({
-    location: ProgressLocation.Notification,
-    title: 'calculate duplication code',
-    cancellable: false
-  }, async (progress, token: CancellationToken) => {
-    try {
-      await f.exec();
-      if (!f.datas) {
-        provider.stop();
-        return;
-      };
-      await provider.onChanges();
-    } catch (error) {
-      console.error(error);
+let client: LanguageClient;
+let loading = 0;
+let myStatusBarItem: StatusBarItem;
+
+
+function updateStatusBar (res?: any[]) {
+  setTimeout(() => {
+    if (loading > 0) {
+      myStatusBarItem.text = `$(loading~spin) duplication: 分析中...`;
+    } else if (res) {
+      myStatusBarItem.text = `duplication: ${res.length}个重复项`;
+    } else {
+      myStatusBarItem.text = `duplication: 暂未发现重复`;
     }
-  });
+    myStatusBarItem.show();
+  }, 10);
 }
-
-
 // 激活程序
 export async function activate (context: ExtensionContext) {
-  const config = new Config();
+  let outputChannel: OutputChannel = window.createOutputChannel(ServerId);
+  let serverModule = context.asAbsolutePath(
+    path.resolve('dist', 'server.js')
+  );
+  let debugOptions = { execArgv: ["--nolazy", "--inspect=6016"] };
+  let serverOptions: ServerOptions = {
+    run: { module: serverModule, transport: TransportKind.ipc },
+    debug: {
+      module: serverModule,
+      transport: TransportKind.ipc,
+      options: debugOptions
+    }
+  };
+  let clientOptions: LanguageClientOptions = {
+    documentSelector: [{ scheme: 'file', language: '*' }],
+    outputChannel: outputChannel,
+    synchronize: {
+      configurationSection: 'duplication'
+    }
+  };
+  client = new LanguageClient(
+    ServerId,
+    ServerId,
+    serverOptions,
+    clientOptions
+  );
 
-  const f = new Files(config);
-
-  const provider = new Provider(context, f, config);
-
-  await init(f, provider, config);
-
-  context.subscriptions.push(workspace.onDidChangeWorkspaceFolders(debounce(async () => { await init(f, provider, config); }, config.debounceWait)));
-  context.subscriptions.push(workspace.onDidChangeConfiguration(debounce(async () => { await init(f, provider, config); }, config.debounceWait)));
-
-  context.subscriptions.push(workspace.onDidChangeTextDocument(
-    debounce(async (event: TextDocumentChangeEvent) => {
-      let fp = event.document.uri.path;
-      let content = event.document.getText();
-      await f.put(fp, { content: content });
-      provider.onChange(fp);
-    }, config.debounceWait)
-  ));
-
-  context.subscriptions.push(window.onDidChangeActiveTextEditor(
-    debounce(async (editor: TextEditor | undefined) => {
-      if (!editor) {
-        return;
+  client.onReady().then(() => {
+    client.onNotification(LoadingCommand, () => {
+      loading++;
+      updateStatusBar();
+    });
+    client.onNotification(LoadingHideCommand, (res: IDuplication[]) => {
+      loading--;
+      updateStatusBar(res);
+    });
+    client.onNotification(ShowQuickPickCommand, (res: IDuplication[]) => {
+      if (workspace.workspaceFolders) {
+        quickPick(res, workspace.workspaceFolders[0].uri.path);
+        updateStatusBar(res);
       }
-      let fp = editor.document.uri.path;
-      let content = editor.document.getText();
-      await f.put(fp, { content: content });
-      provider.onChange(fp);
-    }, config.debounceWait)
-  ));
+    });
+  });
 
-  QuickPick(context, f, provider, config);
+  context.subscriptions.push(
+    client.start()
+  );
+
+  myStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 100);
+  myStatusBarItem.command = StartCommand;
+  myStatusBarItem.text = `duplication: 检查重复项`;
+  myStatusBarItem.show();
+  context.subscriptions.push(myStatusBarItem);
+  context.subscriptions.push(commands.registerCommand(StartCommand, () => {
+    client.sendNotification(StartCommand);
+  }));
 }
 
 export async function deactivate () {
+  if (!client) {
+    return undefined;
+  }
+  return client.stop();
 }

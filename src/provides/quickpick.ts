@@ -1,23 +1,18 @@
 import {
-  ExtensionContext, workspace,
+  workspace,
   Range,
   Uri,
   window,
-  commands,
-  ViewColumn
+  ViewColumn,
+  QuickPickItem
 } from 'vscode';
-import { Files } from '../utils/files';
-import { Config } from '../utils/config';
-import { Provider } from '../provides/index';
-import { IToken } from '../index.d';
-import { arrayCombine } from '../utils/combine';
-import { dup } from '../utils/duplication';
+import { IToken, IDuplication } from '../index.d';
 
 const decoration = window.createTextEditorDecorationType({
   backgroundColor: "rgba(255,0,0,0.3)"
 });
 
-async function showDiff (a: IToken, b: IToken) {
+async function showDiff (a: Omit<IToken, 'content'>, b: Omit<IToken, 'content'>) {
   let auri = Uri.parse(a.filename);
   let buri = Uri.parse(b.filename);
   let [adocOpen, bdocOpen] = await Promise.all([workspace.openTextDocument(auri), workspace.openTextDocument(buri)]);
@@ -43,22 +38,17 @@ function removeroot (p: string, root: string | undefined): string {
   }
   return p.replace(new RegExp(`^${root}/`, 'i'), '');
 }
-export function QuickPick (context: ExtensionContext, f: Files, provider: Provider, config: Config) {
-  context.subscriptions.push(commands.registerCommand('extension.duplication', async () => {
-    let p = f.paths;
-    let combines = arrayCombine(p, 2);
-    let diff = dup(combines, f.datas, config.minTokens);
-    let picks = diff.map((item) => {
-      return {
-        label: `${removeroot(item.a.filename, config.root)}:${item.a.start.line} <==> ${removeroot(item.b.filename, config.root)}:${item.b.start.line}`,
-        ...item
-      };
-    });
-    let find = await window.showQuickPick(picks);
-    if (!find) {
-      return;
-    }
-    showDiff(find.a, find.b);
-  }));
 
+export async function quickPick (diff: IDuplication[], root: string) {
+  let picks: (QuickPickItem & IDuplication)[] = diff.map((item) => {
+    return {
+      label: `${removeroot(item.a.filename, root)}:${item.a.start.line} <==> ${removeroot(item.b.filename, root)}:${item.b.start.line}`,
+      ...item
+    };
+  });
+  let find = await window.showQuickPick(picks);
+  if (!find) {
+    return;
+  }
+  showDiff(find.a, find.b);
 }

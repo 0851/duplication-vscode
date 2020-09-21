@@ -2,11 +2,13 @@ import { IToken, ILoc } from '../index.d';
 // 空白
 let space_reg = /^\s+/;
 // 字符串
-let string_reg = /^([\'\"\`]+)(?<value>(?:[^\1])*?)\1/;
+let string_reg1 = /^('+)(?<value>[\s\S]*?)'+/;
+let string_reg2 = /^("+)(?<value>[\s\S]*?)"+/;
+let string_reg3 = /^(`+)(?<value>[\s\S]*?)`+/;
 
-let key_reg = /^[a-zA-Z0-9\$\_][a-zA-Z0-9\_\-\$]*/;
+// let key_reg = /^[a-zA-Z0-9\$\_][a-zA-Z0-9\_\-\$]*/;
 
-let sym_reg = /^[\`\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\'\"\;\:\,\.\/\<\>\?]*/;
+// let sym_reg = /^[\`\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\'\"\;\:\,\.\/\<\>\?]*/;
 
 // 其他token
 let other_reg = /^[^\s\'\"\']+/;
@@ -19,13 +21,15 @@ function tokenizer_generator (
   start: ILoc,
   end: ILoc,
   value: string,
-  filename: string
+  filename: string,
+  content: string
 ): IToken {
   return {
     value,
     start,
     end,
-    filename
+    filename,
+    content
   };
 }
 
@@ -36,6 +40,7 @@ class Tokenizer {
   private line: number;
   private col: number;
   tokens: IToken[] = [];
+  stringtokens: string[] = [];
   constructor (public input: string = '', public filename: string) {
     this.input = input;
     this.source = input;
@@ -95,12 +100,12 @@ class Tokenizer {
     }
     let start_loc = this.get_loc();
 
-    let v = this.by_reg(string_reg);
+    let v = this.by_reg(string_reg1);
     if (!v) {
-      v = this.by_reg(key_reg) || '';
+      v = this.by_reg(string_reg2) || '';
     }
     if (!v) {
-      v = this.by_reg(sym_reg) || '';
+      v = this.by_reg(string_reg3) || '';
     }
     if (!v) {
       v = this.by_reg(other_reg) || '';
@@ -109,7 +114,7 @@ class Tokenizer {
       v = this.by_reg(any_reg) || '';
     }
     let end_loc = this.get_loc();
-    let token = tokenizer_generator(start_loc, end_loc, v, this.filename);
+    let token = tokenizer_generator(start_loc, end_loc, v, this.filename, this.source);
     return token;
   }
   move (i: number = 1, line: number = 0): void {
@@ -134,13 +139,28 @@ class Tokenizer {
   }
   next_all (): IToken[] {
     let tokens: IToken[] = [];
+    let stringtokens: string[] = [];
     while (!this.eof()) {
       let item = this.next();
       if (item !== undefined) {
-        tokens.push(item);
+        let item2 = this.next();
+        if (item2 !== undefined) {
+          let v = `${item.value}${item2.value}`;
+          tokens.push({
+            ...item,
+            start: item.start,
+            end: item2.end,
+            value: v
+          });
+          stringtokens.push(v);
+        } else {
+          tokens.push(item);
+          stringtokens.push(item.value);
+        }
       }
     }
     this.tokens = tokens;
+    this.stringtokens = stringtokens;
     return tokens;
   }
 }

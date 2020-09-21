@@ -1,6 +1,6 @@
 
 export function arrayCombine (targetArr: string[] = [], m = 2): string[][] {
-  console.time('arrayCombine');
+  // console.time('arrayCombine');
   let combine: string[][] = [];
   let n = targetArr.length;
   if (m > n) { return combine; }
@@ -52,7 +52,7 @@ export function arrayCombine (targetArr: string[] = [], m = 2): string[][] {
       pos = lastm;
     }
   }
-  console.timeEnd('arrayCombine');
+  // console.timeEnd('arrayCombine');
   return combine;
 }
 
@@ -61,7 +61,7 @@ export function arrayCombine (targetArr: string[] = [], m = 2): string[][] {
 // console.log(arrayCombine(['爱上邓丽君', '萨顶顶', '得到的', '对的'], 1));
 
 // 获取指定文件的所有组合
-export function filterByPath (groups: string[][], filepath: string): string[][] {
+export function filterCombine (groups: string[][], filepath: string): string[][] {
   let res = [];
   for (let index = 0; index < groups.length; index++) {
     const element = groups[index];

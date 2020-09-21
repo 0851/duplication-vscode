@@ -1,11 +1,13 @@
+export interface IFileToken extends IFile {
+  tokens: IToken[]
+  stringtokens: string[]
+}
 export interface IFileData {
-  [filepath: string]: IFile & {
-    tokens: IToken[]
-  }
+  [filepath: string]: IFileToken
 }
 
-export interface IPathGroup {
-  [key: string]: [string, string][]
+export interface IPathTokenGroup {
+  [key: string]: IToken[]
 }
 
 export interface IDebouncedFunc<T extends (...args: any[]) => any> {
@@ -23,7 +25,8 @@ export interface IToken {
   value: string,
   filename: string,
   start: ILoc,
-  end: ILoc
+  end: ILoc,
+  content: string
 }
 export interface ILoc {
   pos: number,
@@ -36,6 +39,6 @@ export type IShingles = {
 };
 
 export interface IDuplication {
-  a: IToken,
-  b: IToken
+  a: Omit<IToken, 'content'>
+  b: Omit<IToken, 'content'>
 }

@@ -6,17 +6,18 @@ import { Config } from './config';
 import * as eventemitter3 from 'eventemitter3';
 import debounce from 'lodash-es/debounce';
 import { Tokenizer } from './tokenizer';
-import { IFile, IFileData, IShingles, IPathGroup } from '../index.d';
+import { IFile, IFileData, IShingles, IToken } from '../index.d';
+import { arrayCombine } from '../utils/combine';
 
 
-
-export class Files extends eventemitter3 {
+export class FileUtil extends eventemitter3 {
   datas: IFileData;
   watch: (() => Promise<void>) | undefined;
   _paths: Set<string> = new Set();
   paths: string[] = [];
-  groups: IPathGroup = {};
+  tokens: IToken[] = [];
   shingles: IShingles = {};
+  combines: string[][] = [];
   constructor (public config: Config) {
     super();
     this.datas = {};
@@ -29,7 +30,7 @@ export class Files extends eventemitter3 {
     if (this.watch) {
       await this.watch();
     }
-    console.time('globby');
+    // console.time('globby');
     let paths = await globby(`${this.config.root}/**/*`, {
       dot: true,
       cwd: this.config.root,
@@ -45,7 +46,7 @@ export class Files extends eventemitter3 {
     if (this.config.watch === true) {
       this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this), this.config.debounceWait), this.config);
     }
-    console.timeEnd('globby');
+    // console.timeEnd('globby');
     await this.reads(paths);
   }
   //计算汉明距离
@@ -53,9 +54,9 @@ export class Files extends eventemitter3 {
     return ((num1 ^ num2).toString(2).match(/1/g) || '').length;
   };
   async reads (filepaths: string[]): Promise<void> {
-    console.time('reads');
+    // console.time('reads');
     await Promise.all(filepaths.map((filepath) => this._read(filepath, false)));
-    console.timeEnd('reads');
+    // console.timeEnd('reads');
     this.pathGroupGenerator();
   }
   removes (filepaths: string[]): void {
@@ -84,7 +85,8 @@ export class Files extends eventemitter3 {
     if (file) {
       let item = {
         ...nf,
-        tokens: tokenizer.tokens
+        tokens: tokenizer.tokens,
+        stringtokens: tokenizer.stringtokens
       };
       this.datas[filepath] = item;
     }
@@ -96,16 +98,17 @@ export class Files extends eventemitter3 {
     this.pathGroupGenerator();
   }
   pathGroupGenerator () {
-    console.time('pathGroupGenerator');
+    // console.time('pathGroupGenerator');
     let paths = [...this._paths];
-    let groups: IPathGroup = {};
-    for (let index = 0; index < paths.length; index++) {
-      const element = paths[index];
-      groups[element] = paths.map((d) => [element, d]);
-    }
+    let tokens: IToken[] = paths.reduce((res, p) => {
+      Array.prototype.push.apply(res, this.datas[p].tokens);
+      return res;
+    }, []);
     this.paths = paths;
-    this.groups = groups;
-    console.timeEnd('pathGroupGenerator');
+    this.tokens = tokens;
+    let allcombine = arrayCombine(this.paths, 2);
+    this.combines = allcombine;
+    // console.timeEnd('pathGroupGenerator');
   }
   remove (filepath: string): void {
     this._remove(filepath);
@@ -169,7 +172,8 @@ export class Files extends eventemitter3 {
     let item = {
       filepath: f.filepath,
       content: f.content,
-      tokens: tokenizer.tokens
+      tokens: tokenizer.tokens,
+      stringtokens: tokenizer.stringtokens
     };
     this.datas[filepath] = item;
     if (m === true) {
