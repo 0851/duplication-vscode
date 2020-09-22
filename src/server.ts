@@ -8,7 +8,7 @@ import { Config, StartCommand, Command, ShowQuickPickCommand, LoadingCommand, Lo
 import { Provider } from './provides/index';
 import debounce from 'lodash-es/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-
+import values from 'lodash-es/values';
 const connection = createConnection(ProposedFeatures.all);
 
 const documents = new TextDocuments(TextDocument);
@@ -16,7 +16,6 @@ const documents = new TextDocuments(TextDocument);
 let config: Config;
 let files: FileUtil;
 let provider: Provider;
-
 let workspaceFolder: string | null;
 
 
@@ -34,12 +33,15 @@ connection.onInitialize(async (params) => {
   provider = new Provider(connection, files, config);
   connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] Started and initialize received`);
 
-
   let execute = debounce(async () => {
+    if (provider.loading > 0) {
+      return;
+    }
     connection.sendNotification(LoadingCommand);
-    let res = await provider.onChanges();
-    connection.sendNotification(LoadingHideCommand, [res]);
-    return res;
+    await provider.onChanges();
+    if (provider.loading <= 0) {
+      connection.sendNotification(LoadingHideCommand, [values(provider.diffs)]);
+    }
   }, config.debounceWait);
 
   let changeFn = debounce(async event => {
@@ -72,13 +74,20 @@ connection.onInitialize(async (params) => {
 
   connection.onExecuteCommand(async (params) => {
     if (params.command === Command) {
-      let res = await execute();
-      connection.sendNotification(ShowQuickPickCommand, [res]);
+      if (provider.loading > 0) {
+        connection.window.showInformationMessage('重复项正在分析中...');
+        return;
+      }
+      connection.sendNotification(ShowQuickPickCommand, [values(provider.diffs)]);
     }
   });
   connection.onNotification(StartCommand, async () => {
-    let res = await execute();
-    connection.sendNotification(ShowQuickPickCommand, [res]);
+    await execute();
+    if (provider.loading > 0) {
+      connection.window.showInformationMessage('重复项正在分析中...');
+      return;
+    }
+    connection.sendNotification(ShowQuickPickCommand, [values(provider.diffs)]);
   });
 
   return {

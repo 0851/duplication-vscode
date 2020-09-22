@@ -59,18 +59,29 @@ function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IT
         continue;
       }
 
+      let afilename = aendtoken.filename;
+      let acontent = aendtoken.content;
+      let astart = astarttoken.start;
+      let aend = aendtoken.end;
+
+      let bfilename = bendtoken.filename;
+      let bcontent = bendtoken.content;
+      let bstart = bstarttoken.start;
+      let bend = bendtoken.end;
+
       let diff = {
+        key: `${afilename}_${bfilename}_${astart.pos}_${bstart.pos}`,
         a: {
-          filename: aendtoken.filename,
-          start: astarttoken.start,
-          value: astarttoken.content.slice(astarttoken.start.pos, aendtoken.end.pos),
-          end: aendtoken.end
+          filename: afilename,
+          start: astart,
+          value: acontent.slice(astart.pos, aend.pos),
+          end: aend
         },
         b: {
-          filename: bendtoken.filename,
-          start: bstarttoken.start,
-          value: bstarttoken.content.slice(bstarttoken.start.pos, bendtoken.end.pos),
-          end: bendtoken.end
+          filename: bfilename,
+          start: bstart,
+          value: bcontent.slice(bstart.pos, bend.pos),
+          end: bend
         }
       };
       res.push(diff);
@@ -107,30 +118,31 @@ function sleep (time: number = 50) {
   });
 }
 async function dupeach (combines: string[][], file: FileUtil, maxlen: number): Promise<IDuplication[]> {
-  let allcombs = [...combines];
-  let res: IDuplication[] = [];
-  let actions = [];
-  while (allcombs.length) {
-    let combs = allcombs.splice(0, 10000);
-    actions.push((async (combs) => {
-      let t = await split(combs, file, maxlen);
-      Array.prototype.push.apply(res, t);
-    })(combs));
-  }
-  await Promise.all(actions);
-  // let comb;
-  // let combs = [...combines];
+  // let allcombs = [...combines];
   // let res: IDuplication[] = [];
-  // let count = 0;
-  // while (comb = combs.shift()) {
-  //   let t = _dup(comb, file, maxlen);
-  //   Array.prototype.push.apply(res, t);
-  //   count++;
-  //   if (count > 10000) {
-  //     count = 0;
-  //     await sleep();
-  //   }
+  // let actions = [];
+  // while (allcombs.length) {
+  //   let combs = allcombs.splice(0, 10000);
+  //   actions.push((async (combs) => {
+  //     let t = await split(combs, file, maxlen);
+  //     Array.prototype.push.apply(res, t);
+  //   })(combs));
   // }
+  // await Promise.all(actions);
+
+  let comb;
+  let combs = [...combines];
+  let res: IDuplication[] = [];
+  let count = 0;
+  while (comb = combs.shift()) {
+    let t = _dup(comb, file, maxlen);
+    Array.prototype.push.apply(res, t);
+    count++;
+    if (count > 2000) {
+      count = 0;
+      await sleep();
+    }
+  }
   return res;
 }
 export async function dup (filename: string, file: FileUtil, maxlen: number): Promise<IDuplication[]> {

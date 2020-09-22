@@ -41,9 +41,7 @@ function updateStatusBar (res?: any[]) {
 // 激活程序
 export async function activate (context: ExtensionContext) {
   let outputChannel: OutputChannel = window.createOutputChannel(ServerId);
-  let serverModule = context.asAbsolutePath(
-    path.resolve('dist', 'server.js')
-  );
+  let serverModule = context.asAbsolutePath(path.join('dist', 'server.js'));
   let debugOptions = { execArgv: ["--nolazy", "--inspect=6016"] };
   let serverOptions: ServerOptions = {
     run: { module: serverModule, transport: TransportKind.ipc },

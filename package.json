@@ -52,8 +52,8 @@
 					},
 					"duplication.minTokens": {
 						"type": "number",
-						"default": 50,
-						"description": "最小匹配分词 -> 50",
+						"default": 39,
+						"description": "最小匹配分词 -> 39",
 						"scope": "window"
 					},
 					"duplication.maxSize": {

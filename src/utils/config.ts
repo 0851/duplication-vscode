@@ -45,7 +45,7 @@ export class Config {
     ];
   }
   get minTokens (): number {
-    return this.data['duplication.minTokens'] || 50;
+    return this.data['duplication.minTokens'] || 39;
   }
   get debounceWait (): number {
     return this.data['duplication.debounceWait'] || 500;

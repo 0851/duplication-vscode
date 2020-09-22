@@ -3,11 +3,13 @@ import { Config } from '../utils/config';
 import { IDuplication } from '../index.d';
 import { dup, dupall } from '../utils/duplication';
 import { IConnection, Diagnostic, DiagnosticRelatedInformation, Location, Range } from 'vscode-languageserver';
-
+import keyBy from 'lodash-es/keyBy';
 export const CODE_ACTION = 'goto-duplication';
 
 export class Provider {
   file: FileUtil;
+  diffs: { [key: string]: IDuplication } = {};
+  loading: number = 0;
   constructor (public context: IConnection, file: FileUtil, public config: Config) {
     this.context = context;
     this.config = config;
@@ -18,18 +20,23 @@ export class Provider {
     if (!this.config.root) {
       return [];
     }
+    this.loading++;
+    // console.time('changes');
     let diff = await dupall(this.file, this.config.minTokens);
+    this.diffs = keyBy(diff, 'key');
     for (let index = 0; index < p.length; index++) {
       const filename = p[index];
       let find = diff.reduce((res: IDuplication[], next) => {
         if (next.a.filename === filename) {
           res.push({
+            key: next.key,
             a: next.a,
             b: next.b
           });
         }
         if (next.b.filename === filename && next.a.filename !== filename) {
           res.push({
+            key: next.key,
             a: next.b,
             b: next.a
           });
@@ -38,6 +45,8 @@ export class Provider {
       }, []);
       this.setdiagnostics(filename, find);
     }
+    this.loading--;
+    // console.timeEnd('changes');
     return diff;
   }
   setdiagnostics (filename: string, diff: IDuplication[]): void {
@@ -65,9 +74,13 @@ export class Provider {
   }
   async onChange (filename: string): Promise<IDuplication[]> {
     // console.time('change');
+    this.loading++;
     let diff = await dup(filename, this.file, this.config.minTokens);
+    let diffs = keyBy(diff, 'key');
+    Object.assign(this.diffs, diffs);
     this.setdiagnostics(filename, diff);
     // console.timeEnd('change');
+    this.loading--;
     return diff;
   }
 }

@@ -39,6 +39,7 @@ export type IShingles = {
 };
 
 export interface IDuplication {
+  key: string
   a: Omit<IToken, 'content'>
   b: Omit<IToken, 'content'>
 }
