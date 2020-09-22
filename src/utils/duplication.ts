@@ -70,7 +70,7 @@ function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IT
       let bend = bendtoken.end;
 
       let diff = {
-        key: `${afilename}_${bfilename}_${astart.pos}_${bstart.pos}`,
+        key: `${afilename}_${bfilename}_${astart.pos}_${bstart.pos}_${aend.pos}_${bend.pos}`,
         a: {
           filename: afilename,
           start: astart,
@@ -95,6 +95,9 @@ function _dup (comb: string[], file: FileUtil, maxlen: number): IDuplication[] {
   let datas = file.datas;
   afile = datas[comb[0]];
   bfile = datas[comb[1]];
+  if (!afile || !bfile) {
+    return [];
+  }
   let map = dupone(afile.stringtokens, bfile.stringtokens);
   return makedup(map, afile.tokens, bfile.tokens, maxlen);
 }
@@ -138,7 +141,7 @@ async function dupeach (combines: string[][], file: FileUtil, maxlen: number): P
     let t = _dup(comb, file, maxlen);
     Array.prototype.push.apply(res, t);
     count++;
-    if (count > 3000) {
+    if (count > 2000) {
       count = 0;
       await sleep();
     }

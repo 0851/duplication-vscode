@@ -1,6 +1,6 @@
 
 import {
-  createConnection, TextDocuments, ProposedFeatures, TextDocumentSyncKind, Files, ProgressType
+  createConnection, TextDocuments, ProposedFeatures, TextDocumentSyncKind, Files, ProgressType, FileChangeType
 } from 'vscode-languageserver';
 
 import { FileUtil } from './utils/files';
@@ -50,6 +50,21 @@ connection.onInitialize(async (params) => {
     await files.put(filename, { content: content });
     provider.onChange(filename);
   }, config.debounceWait);
+
+  connection.onDidChangeWatchedFiles(async _change => {
+    let actions = [];
+    for (let i = 0; i < _change.changes.length; i++) {
+      const change = _change.changes[i];
+      let filename = Files.uriToFilePath(change.uri) || '';
+      let type = change.type;
+      actions.push((async (type, filename) => {
+        connection.console.log(`File Changed ${filename} ${type}`);
+        await files.update(type, filename);
+        provider.fixdiff(type, filename);
+      })(type, filename));
+    }
+    await Promise.all(actions);
+  });
 
   connection.onDidChangeConfiguration(debounce(async () => {
     connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] onDidChangeConfiguration`);
@@ -107,8 +122,6 @@ connection.onInitialize(async (params) => {
     }
   };
 });
-
-
 
 documents.listen(connection);
 connection.listen();

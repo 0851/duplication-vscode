@@ -4,7 +4,7 @@ import { IDuplication } from '../index.d';
 import { dup, dupall } from '../utils/duplication';
 import { IConnection, Diagnostic, DiagnosticRelatedInformation, Location, Range } from 'vscode-languageserver';
 import keyBy from 'lodash-es/keyBy';
-export const CODE_ACTION = 'goto-duplication';
+import { FileChangeType } from 'vscode-languageserver';
 
 export class Provider {
   file: FileUtil;
@@ -15,15 +15,41 @@ export class Provider {
     this.config = config;
     this.file = file;
   }
+  fixdiff (event: FileChangeType, filename: string) {
+    if (event === FileChangeType.Deleted) {
+      this.filternamediff(filename);
+    } else {
+      this.onChange(filename);
+    }
+  }
+  filternamediff (filename: string) {
+    this.diffs = Object.keys(this.diffs).reduce((res: { [key: string]: IDuplication } = {}, item: string) => {
+      if (item.indexOf(filename) < 0) {
+        res[item] = this.diffs[item];
+      }
+      return res;
+    }, {});
+  }
+  filterdiff () {
+    this.diffs = Object.keys(this.diffs).reduce((res: { [key: string]: IDuplication } = {}, item: string) => {
+      let find = this.file.paths.find((path) => {
+        return item.indexOf(path) > -1;
+      });
+      if (find) {
+        res[item] = this.diffs[item];
+      }
+      return res;
+    }, {});
+  }
   async onChanges (): Promise<IDuplication[]> {
     let p = this.file.paths;
     if (!this.config.root) {
       return [];
     }
     this.loading++;
-    
     let diff = await dupall(this.file, this.config.minTokens);
     this.diffs = keyBy(diff, 'key');
+    this.filterdiff();
     console.time('changes');
     for (let index = 0; index < p.length; index++) {
       const filename = p[index];
@@ -74,13 +100,15 @@ export class Provider {
     });
   }
   async onChange (filename: string): Promise<IDuplication[]> {
-    console.time('change');
+    console.time(`change ${filename}`);
     this.loading++;
+    this.filternamediff(filename);
     let diff = await dup(filename, this.file, this.config.minTokens);
     let diffs = keyBy(diff, 'key');
     Object.assign(this.diffs, diffs);
+    this.filterdiff();
     this.setdiagnostics(filename, diff);
-    console.timeEnd('change');
+    console.timeEnd(`change ${filename}`);
     this.loading--;
     return diff;
   }

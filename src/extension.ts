@@ -56,7 +56,8 @@ export async function activate (context: ExtensionContext) {
     documentSelector: [{ scheme: 'file', language: '*' }],
     outputChannel: outputChannel,
     synchronize: {
-      configurationSection: 'duplication'
+      configurationSection: 'duplication',
+      fileEvents: workspace.createFileSystemWatcher('**/*')
     }
   };
   client = new LanguageClient(

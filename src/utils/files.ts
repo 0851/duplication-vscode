@@ -1,18 +1,17 @@
-import { read, watch, WatchEventName, hasOwnProperty } from './index';
+import { read, hasOwnProperty } from './index';
 import * as fs from 'fs';
 import * as globby from 'globby';
 import * as bytes from 'bytes';
 import { Config } from './config';
 import * as eventemitter3 from 'eventemitter3';
-import debounce from 'lodash-es/debounce';
 import { Tokenizer } from './tokenizer';
 import { IFile, IFileData, IShingles, IToken } from '../index.d';
 import { arrayCombine } from '../utils/combine';
+import { FileChangeType } from 'vscode-languageserver';
 
 
 export class FileUtil extends eventemitter3 {
   datas: IFileData;
-  watch: (() => Promise<void>) | undefined;
   _paths: Set<string> = new Set();
   paths: string[] = [];
   tokens: IToken[] = [];
@@ -27,9 +26,6 @@ export class FileUtil extends eventemitter3 {
     if (!this.config.root) {
       return;
     }
-    if (this.watch) {
-      await this.watch();
-    }
     console.time('globby');
     let paths = await globby(`${this.config.root}/**/*`, {
       dot: true,
@@ -43,9 +39,6 @@ export class FileUtil extends eventemitter3 {
       gitignore: true,
       expandDirectories: true
     });
-    if (this.config.watch === true) {
-      this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this), this.config.debounceWait), this.config);
-    }
     console.timeEnd('globby');
     await this.reads(paths);
   }
@@ -124,8 +117,8 @@ export class FileUtil extends eventemitter3 {
       this.pathGroupGenerator();
     }
   }
-  async update (rootpath: string, event: WatchEventName, filepath: string, stats?: fs.Stats): Promise<void> {
-    if (event === 'unlink' || event === 'error') {
+  async update (event: FileChangeType, filepath: string): Promise<void> {
+    if (event === FileChangeType.Deleted) {
       this._remove(filepath, false);
     }
     await this._read(filepath, false);

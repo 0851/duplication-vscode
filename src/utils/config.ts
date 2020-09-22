@@ -19,7 +19,6 @@ export class Config {
       'duplication.debounceWait',
       'duplication.maxSize',
       'duplication.debug',
-      'duplication.watch',
       'duplication.severity'
     ];
     await Promise.all(keys.map(async (key) => {
@@ -57,9 +56,6 @@ export class Config {
   }
   get debug (): boolean {
     return this.data['duplication.debug'] || false;
-  }
-  get watch (): boolean {
-    return this.data['duplication.watch'] || true;
   }
   get severity (): DiagnosticSeverity {
     return this.data['duplication.severity'] || 2;
