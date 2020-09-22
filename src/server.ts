@@ -4,7 +4,7 @@ import {
 } from 'vscode-languageserver';
 
 import { FileUtil } from './utils/files';
-import { Config, StartCommand, Command, ShowQuickPickCommand, LoadingCommand, LoadingHideCommand } from './utils/config';
+import { Config, StartCommand, Command, ShowCommand, ShowQuickPickCommand, LoadingCommand, LoadingHideCommand } from './utils/config';
 import { Provider } from './provides/index';
 import debounce from 'lodash-es/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -17,8 +17,6 @@ let config: Config;
 let files: FileUtil;
 let provider: Provider;
 let workspaceFolder: string | null;
-
-
 
 connection.onInitialize(async (params) => {
   workspaceFolder = params.rootUri;
@@ -43,6 +41,7 @@ connection.onInitialize(async (params) => {
       connection.sendNotification(LoadingHideCommand, [values(provider.diffs)]);
     }
   }, config.debounceWait);
+
 
   let changeFn = debounce(async event => {
     let content = event.document.getText();
@@ -71,25 +70,29 @@ connection.onInitialize(async (params) => {
   });
 
 
-
   connection.onExecuteCommand(async (params) => {
     if (params.command === Command) {
       if (provider.loading > 0) {
-        connection.window.showInformationMessage('重复项正在分析中...');
+        connection.window.showInformationMessage('重复项: 正在分析中...');
         return;
       }
       connection.sendNotification(ShowQuickPickCommand, [values(provider.diffs)]);
     }
   });
   connection.onNotification(StartCommand, async () => {
-    await execute();
     if (provider.loading > 0) {
-      connection.window.showInformationMessage('重复项正在分析中...');
+      connection.window.showInformationMessage('重复项: 正在分析中...');
+      return;
+    }
+    await execute();
+  });
+  connection.onNotification(ShowCommand, async () => {
+    if (provider.loading > 0) {
+      connection.window.showInformationMessage('重复项: 正在分析中...');
       return;
     }
     connection.sendNotification(ShowQuickPickCommand, [values(provider.diffs)]);
   });
-
   return {
     capabilities: {
       textDocumentSync: {

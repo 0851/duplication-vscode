@@ -9,7 +9,7 @@ import {
   commands
 } from 'vscode';
 import { ServerOptions, TransportKind, LanguageClientOptions, LanguageClient } from 'vscode-languageclient';
-import { StartCommand, ServerId, LoadingHideCommand, LoadingCommand, ShowQuickPickCommand } from './utils/config';
+import { StartCommand, ServerId, ShowCommand, LoadingHideCommand, LoadingCommand, ShowQuickPickCommand } from './utils/config';
 import * as path from 'path';
 import { IDuplication } from '.';
 import { quickPick } from './provides/quickpick';
@@ -24,16 +24,17 @@ process.on('unhandledRejection', error => {
 let client: LanguageClient;
 let loading = 0;
 let myStatusBarItem: StatusBarItem;
+let myStatusBarItemExec: StatusBarItem;
 
 
 function updateStatusBar (res?: any[]) {
   setTimeout(() => {
     if (loading > 0) {
-      myStatusBarItem.text = `$(loading~spin) duplication: 分析中...`;
+      myStatusBarItem.text = `$(loading~spin) 重复项: 分析中...`;
     } else if (res) {
-      myStatusBarItem.text = `duplication: ${res.length}个重复项`;
+      myStatusBarItem.text = `重复项: ${res.length}个`;
     } else {
-      myStatusBarItem.text = `duplication: 暂未发现重复`;
+      myStatusBarItem.text = `重复项: 暂未发现`;
     }
     myStatusBarItem.show();
   }, 10);
@@ -87,12 +88,21 @@ export async function activate (context: ExtensionContext) {
   );
 
   myStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 100);
-  myStatusBarItem.command = StartCommand;
-  myStatusBarItem.text = `duplication: 检查重复项`;
+  myStatusBarItem.command = ShowCommand;
   myStatusBarItem.show();
   context.subscriptions.push(myStatusBarItem);
+
+  myStatusBarItemExec = window.createStatusBarItem(StatusBarAlignment.Right, 100);
+  myStatusBarItemExec.command = StartCommand;
+  myStatusBarItemExec.text = `重新检查重复项`;
+  myStatusBarItemExec.show();
+  context.subscriptions.push(myStatusBarItemExec);
+
   context.subscriptions.push(commands.registerCommand(StartCommand, () => {
     client.sendNotification(StartCommand);
+  }));
+  context.subscriptions.push(commands.registerCommand(ShowCommand, () => {
+    client.sendNotification(ShowCommand);
   }));
 }
 

@@ -1,6 +1,6 @@
 
 export function arrayCombine (targetArr: string[] = [], m = 2): string[][] {
-  // console.time('arrayCombine');
+  console.time('arrayCombine');
   let combine: string[][] = [];
   let n = targetArr.length;
   if (m > n) { return combine; }
@@ -52,7 +52,7 @@ export function arrayCombine (targetArr: string[] = [], m = 2): string[][] {
       pos = lastm;
     }
   }
-  // console.timeEnd('arrayCombine');
+  console.timeEnd('arrayCombine');
   return combine;
 }
 

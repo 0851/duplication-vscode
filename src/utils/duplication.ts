@@ -110,7 +110,7 @@ async function split (combs: string[][], file: FileUtil, maxlen: number): Promis
   return res;
 }
 
-function sleep (time: number = 50) {
+function sleep (time: number = 100) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       resolve();
@@ -138,7 +138,7 @@ async function dupeach (combines: string[][], file: FileUtil, maxlen: number): P
     let t = _dup(comb, file, maxlen);
     Array.prototype.push.apply(res, t);
     count++;
-    if (count > 2000) {
+    if (count > 3000) {
       count = 0;
       await sleep();
     }
@@ -152,5 +152,8 @@ export async function dup (filename: string, file: FileUtil, maxlen: number): Pr
 
 export async function dupall (file: FileUtil, maxlen: number): Promise<IDuplication[]> {
   let combs = file.combines;
-  return await dupeach(combs, file, maxlen);
+  console.time('dupall');
+  let res = await dupeach(combs, file, maxlen);
+  console.timeEnd('dupall');
+  return res;
 }

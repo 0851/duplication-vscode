@@ -12934,16 +12934,17 @@ process.on('unhandledRejection', error => {
 let client;
 let loading = 0;
 let myStatusBarItem;
+let myStatusBarItemExec;
 function updateStatusBar(res) {
     setTimeout(() => {
         if (loading > 0) {
-            myStatusBarItem.text = `$(loading~spin) duplication: 分析中...`;
+            myStatusBarItem.text = `$(loading~spin) 重复项: 分析中...`;
         }
         else if (res) {
-            myStatusBarItem.text = `duplication: ${res.length}个重复项`;
+            myStatusBarItem.text = `重复项: ${res.length}个`;
         }
         else {
-            myStatusBarItem.text = `duplication: 暂未发现重复`;
+            myStatusBarItem.text = `重复项: 暂未发现`;
         }
         myStatusBarItem.show();
     }, 10);
@@ -12988,12 +12989,19 @@ function activate(context) {
         });
         context.subscriptions.push(client.start());
         myStatusBarItem = vscode_1.window.createStatusBarItem(vscode_1.StatusBarAlignment.Right, 100);
-        myStatusBarItem.command = config_1.StartCommand;
-        myStatusBarItem.text = `duplication: 检查重复项`;
+        myStatusBarItem.command = config_1.ShowCommand;
         myStatusBarItem.show();
         context.subscriptions.push(myStatusBarItem);
+        myStatusBarItemExec = vscode_1.window.createStatusBarItem(vscode_1.StatusBarAlignment.Right, 100);
+        myStatusBarItemExec.command = config_1.StartCommand;
+        myStatusBarItemExec.text = `重新检查重复项`;
+        myStatusBarItemExec.show();
+        context.subscriptions.push(myStatusBarItemExec);
         context.subscriptions.push(vscode_1.commands.registerCommand(config_1.StartCommand, () => {
             client.sendNotification(config_1.StartCommand);
+        }));
+        context.subscriptions.push(vscode_1.commands.registerCommand(config_1.ShowCommand, () => {
+            client.sendNotification(config_1.ShowCommand);
         }));
     });
 }
@@ -13097,9 +13105,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Config = exports.ServerId = exports.ShowQuickPickCommand = exports.LoadingCommand = exports.LoadingHideCommand = exports.StartCommand = exports.Command = void 0;
+exports.Config = exports.ServerId = exports.ShowQuickPickCommand = exports.LoadingCommand = exports.LoadingHideCommand = exports.ShowCommand = exports.StartCommand = exports.Command = void 0;
 exports.Command = "extension.duplication";
 exports.StartCommand = `extension.duplicationstart`;
+exports.ShowCommand = `extension.duplicationshow`;
 exports.LoadingHideCommand = 'duplication.showQuickPickLoadingHide';
 exports.LoadingCommand = 'duplication.showQuickPickLoading';
 exports.ShowQuickPickCommand = 'duplication.showQuickPick';
@@ -13114,7 +13123,8 @@ class Config {
     }
     changeConfig() {
         return __awaiter(this, void 0, void 0, function* () {
-            let keys = ['duplication.ignore',
+            let keys = [
+                'duplication.ignore',
                 'duplication.minTokens',
                 'duplication.debounceWait',
                 'duplication.maxSize',
@@ -13148,7 +13158,7 @@ class Config {
         ];
     }
     get minTokens() {
-        return this.data['duplication.minTokens'] || 39;
+        return this.data['duplication.minTokens'] || 50;
     }
     get debounceWait() {
         return this.data['duplication.debounceWait'] || 500;

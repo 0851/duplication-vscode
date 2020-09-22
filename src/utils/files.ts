@@ -30,7 +30,7 @@ export class FileUtil extends eventemitter3 {
     if (this.watch) {
       await this.watch();
     }
-    // console.time('globby');
+    console.time('globby');
     let paths = await globby(`${this.config.root}/**/*`, {
       dot: true,
       cwd: this.config.root,
@@ -46,7 +46,7 @@ export class FileUtil extends eventemitter3 {
     if (this.config.watch === true) {
       this.watch = watch(`${this.config.root}/**/*`, debounce(this.update.bind(this), this.config.debounceWait), this.config);
     }
-    // console.timeEnd('globby');
+    console.timeEnd('globby');
     await this.reads(paths);
   }
   //计算汉明距离
@@ -54,9 +54,9 @@ export class FileUtil extends eventemitter3 {
     return ((num1 ^ num2).toString(2).match(/1/g) || '').length;
   };
   async reads (filepaths: string[]): Promise<void> {
-    // console.time('reads');
+    console.time('reads');
     await Promise.all(filepaths.map((filepath) => this._read(filepath, false)));
-    // console.timeEnd('reads');
+    console.timeEnd('reads');
     this.pathGroupGenerator();
   }
   removes (filepaths: string[]): void {
@@ -98,7 +98,7 @@ export class FileUtil extends eventemitter3 {
     this.pathGroupGenerator();
   }
   pathGroupGenerator () {
-    // console.time('pathGroupGenerator');
+    console.time('pathGroupGenerator');
     let paths = [...this._paths];
     let tokens: IToken[] = paths.reduce((res, p) => {
       Array.prototype.push.apply(res, this.datas[p].tokens);
@@ -108,7 +108,7 @@ export class FileUtil extends eventemitter3 {
     this.tokens = tokens;
     let allcombine = arrayCombine(this.paths, 2);
     this.combines = allcombine;
-    // console.timeEnd('pathGroupGenerator');
+    console.timeEnd('pathGroupGenerator');
   }
   remove (filepath: string): void {
     this._remove(filepath);

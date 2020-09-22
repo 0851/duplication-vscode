@@ -1,6 +1,7 @@
 import { IConnection, DocumentUri, DiagnosticSeverity } from 'vscode-languageserver';
 export const Command = "extension.duplication";
 export const StartCommand = `extension.duplicationstart`;
+export const ShowCommand = `extension.duplicationshow`;
 export const LoadingHideCommand = 'duplication.showQuickPickLoadingHide';
 export const LoadingCommand = 'duplication.showQuickPickLoading';
 export const ShowQuickPickCommand = 'duplication.showQuickPick';
@@ -12,7 +13,8 @@ export class Config {
     this.root = root;
   }
   async changeConfig () {
-    let keys = ['duplication.ignore',
+    let keys = [
+      'duplication.ignore',
       'duplication.minTokens',
       'duplication.debounceWait',
       'duplication.maxSize',
@@ -45,7 +47,7 @@ export class Config {
     ];
   }
   get minTokens (): number {
-    return this.data['duplication.minTokens'] || 39;
+    return this.data['duplication.minTokens'] || 50;
   }
   get debounceWait (): number {
     return this.data['duplication.debounceWait'] || 500;

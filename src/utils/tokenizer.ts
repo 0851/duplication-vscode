@@ -2,13 +2,13 @@ import { IToken, ILoc } from '../index.d';
 // 空白
 let space_reg = /^\s+/;
 // 字符串
-let string_reg1 = /^('+)(?<value>[\s\S]*?)'+/;
-let string_reg2 = /^("+)(?<value>[\s\S]*?)"+/;
-let string_reg3 = /^(`+)(?<value>[\s\S]*?)`+/;
+let string_reg1 = /^'+(?<value>[\s\S]*?)'+/;
+let string_reg2 = /^"+(?<value>[\s\S]*?)"+/;
+let string_reg3 = /^`+(?<value>[\s\S]*?)`+/;
 
 // let key_reg = /^[a-zA-Z0-9\$\_][a-zA-Z0-9\_\-\$]*/;
 
-// let sym_reg = /^[\`\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\'\"\;\:\,\.\/\<\>\?]*/;
+let sym_reg = /^\s*[\`\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\'\"\;\:\,\.\/\<\>\?]+\s*/;
 
 // 其他token
 let other_reg = /^[^\s\'\"\']+/;
@@ -113,6 +113,11 @@ class Tokenizer {
     if (!v) {
       v = this.by_reg(any_reg) || '';
     }
+
+    let sym = this.by_reg(sym_reg) || '';
+
+    v = v + sym;
+
     let end_loc = this.get_loc();
     let token = tokenizer_generator(start_loc, end_loc, v, this.filename, this.source);
     return token;
@@ -143,20 +148,20 @@ class Tokenizer {
     while (!this.eof()) {
       let item = this.next();
       if (item !== undefined) {
-        let item2 = this.next();
-        if (item2 !== undefined) {
-          let v = `${item.value}${item2.value}`;
-          tokens.push({
-            ...item,
-            start: item.start,
-            end: item2.end,
-            value: v
-          });
-          stringtokens.push(v);
-        } else {
-          tokens.push(item);
-          stringtokens.push(item.value);
-        }
+        // let item2 = this.next();
+        // if (item2 !== undefined) {
+        //   let v = `${item.value}${item2.value}`;
+        //   tokens.push({
+        //     ...item,
+        //     start: item.start,
+        //     end: item2.end,
+        //     value: v
+        //   });
+        //   stringtokens.push(v);
+        // } else {
+        tokens.push(item);
+        stringtokens.push(item.value);
+        // }
       }
     }
     this.tokens = tokens;

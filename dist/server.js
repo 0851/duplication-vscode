@@ -21845,9 +21845,9 @@ class Provider {
                 return [];
             }
             this.loading++;
-            // console.time('changes');
             let diff = yield duplication_1.dupall(this.file, this.config.minTokens);
             this.diffs = keyBy_1.default(diff, 'key');
+            console.time('changes');
             for (let index = 0; index < p.length; index++) {
                 const filename = p[index];
                 let find = diff.reduce((res, next) => {
@@ -21870,7 +21870,7 @@ class Provider {
                 this.setdiagnostics(filename, find);
             }
             this.loading--;
-            // console.timeEnd('changes');
+            console.timeEnd('changes');
             return diff;
         });
     }
@@ -21899,13 +21899,13 @@ class Provider {
     }
     onChange(filename) {
         return __awaiter(this, void 0, void 0, function* () {
-            // console.time('change');
+            console.time('change');
             this.loading++;
             let diff = yield duplication_1.dup(filename, this.file, this.config.minTokens);
             let diffs = keyBy_1.default(diff, 'key');
             Object.assign(this.diffs, diffs);
             this.setdiagnostics(filename, diff);
-            // console.timeEnd('change');
+            console.timeEnd('change');
             this.loading--;
             return diff;
         });
@@ -21994,16 +21994,22 @@ connection.onInitialize((params) => __awaiter(void 0, void 0, void 0, function* 
     connection.onExecuteCommand((params) => __awaiter(void 0, void 0, void 0, function* () {
         if (params.command === config_1.Command) {
             if (provider.loading > 0) {
-                connection.window.showInformationMessage('重复项正在分析中...');
+                connection.window.showInformationMessage('重复项: 正在分析中...');
                 return;
             }
             connection.sendNotification(config_1.ShowQuickPickCommand, [values_1.default(provider.diffs)]);
         }
     }));
     connection.onNotification(config_1.StartCommand, () => __awaiter(void 0, void 0, void 0, function* () {
-        yield execute();
         if (provider.loading > 0) {
-            connection.window.showInformationMessage('重复项正在分析中...');
+            connection.window.showInformationMessage('重复项: 正在分析中...');
+            return;
+        }
+        yield execute();
+    }));
+    connection.onNotification(config_1.ShowCommand, () => __awaiter(void 0, void 0, void 0, function* () {
+        if (provider.loading > 0) {
+            connection.window.showInformationMessage('重复项: 正在分析中...');
             return;
         }
         connection.sendNotification(config_1.ShowQuickPickCommand, [values_1.default(provider.diffs)]);
@@ -22040,7 +22046,7 @@ connection.listen();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.filterCombine = exports.arrayCombine = void 0;
 function arrayCombine(targetArr = [], m = 2) {
-    // console.time('arrayCombine');
+    console.time('arrayCombine');
     let combine = [];
     let n = targetArr.length;
     if (m > n) {
@@ -22088,7 +22094,7 @@ function arrayCombine(targetArr = [], m = 2) {
             pos = lastm;
         }
     }
-    // console.timeEnd('arrayCombine');
+    console.timeEnd('arrayCombine');
     return combine;
 }
 exports.arrayCombine = arrayCombine;
@@ -22135,9 +22141,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Config = exports.ServerId = exports.ShowQuickPickCommand = exports.LoadingCommand = exports.LoadingHideCommand = exports.StartCommand = exports.Command = void 0;
+exports.Config = exports.ServerId = exports.ShowQuickPickCommand = exports.LoadingCommand = exports.LoadingHideCommand = exports.ShowCommand = exports.StartCommand = exports.Command = void 0;
 exports.Command = "extension.duplication";
 exports.StartCommand = `extension.duplicationstart`;
+exports.ShowCommand = `extension.duplicationshow`;
 exports.LoadingHideCommand = 'duplication.showQuickPickLoadingHide';
 exports.LoadingCommand = 'duplication.showQuickPickLoading';
 exports.ShowQuickPickCommand = 'duplication.showQuickPick';
@@ -22152,7 +22159,8 @@ class Config {
     }
     changeConfig() {
         return __awaiter(this, void 0, void 0, function* () {
-            let keys = ['duplication.ignore',
+            let keys = [
+                'duplication.ignore',
                 'duplication.minTokens',
                 'duplication.debounceWait',
                 'duplication.maxSize',
@@ -22186,7 +22194,7 @@ class Config {
         ];
     }
     get minTokens() {
-        return this.data['duplication.minTokens'] || 39;
+        return this.data['duplication.minTokens'] || 50;
     }
     get debounceWait() {
         return this.data['duplication.debounceWait'] || 500;
@@ -22329,7 +22337,7 @@ function split(combs, file, maxlen) {
         return res;
     });
 }
-function sleep(time = 50) {
+function sleep(time = 100) {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
             resolve();
@@ -22357,7 +22365,7 @@ function dupeach(combines, file, maxlen) {
             let t = _dup(comb, file, maxlen);
             Array.prototype.push.apply(res, t);
             count++;
-            if (count > 2000) {
+            if (count > 3000) {
                 count = 0;
                 yield sleep();
             }
@@ -22375,7 +22383,10 @@ exports.dup = dup;
 function dupall(file, maxlen) {
     return __awaiter(this, void 0, void 0, function* () {
         let combs = file.combines;
-        return yield dupeach(combs, file, maxlen);
+        console.time('dupall');
+        let res = yield dupeach(combs, file, maxlen);
+        console.timeEnd('dupall');
+        return res;
     });
 }
 exports.dupall = dupall;
@@ -22430,7 +22441,7 @@ class FileUtil extends eventemitter3 {
             if (this.watch) {
                 yield this.watch();
             }
-            // console.time('globby');
+            console.time('globby');
             let paths = yield globby(`${this.config.root}/**/*`, {
                 dot: true,
                 cwd: this.config.root,
@@ -22446,7 +22457,7 @@ class FileUtil extends eventemitter3 {
             if (this.config.watch === true) {
                 this.watch = index_1.watch(`${this.config.root}/**/*`, debounce_1.default(this.update.bind(this), this.config.debounceWait), this.config);
             }
-            // console.timeEnd('globby');
+            console.timeEnd('globby');
             yield this.reads(paths);
         });
     }
@@ -22457,9 +22468,9 @@ class FileUtil extends eventemitter3 {
     ;
     reads(filepaths) {
         return __awaiter(this, void 0, void 0, function* () {
-            // console.time('reads');
+            console.time('reads');
             yield Promise.all(filepaths.map((filepath) => this._read(filepath, false)));
-            // console.timeEnd('reads');
+            console.timeEnd('reads');
             this.pathGroupGenerator();
         });
     }
@@ -22497,7 +22508,7 @@ class FileUtil extends eventemitter3 {
         this.pathGroupGenerator();
     }
     pathGroupGenerator() {
-        // console.time('pathGroupGenerator');
+        console.time('pathGroupGenerator');
         let paths = [...this._paths];
         let tokens = paths.reduce((res, p) => {
             Array.prototype.push.apply(res, this.datas[p].tokens);
@@ -22507,7 +22518,7 @@ class FileUtil extends eventemitter3 {
         this.tokens = tokens;
         let allcombine = combine_1.arrayCombine(this.paths, 2);
         this.combines = allcombine;
-        // console.timeEnd('pathGroupGenerator');
+        console.timeEnd('pathGroupGenerator');
     }
     remove(filepath) {
         this._remove(filepath);
@@ -22756,11 +22767,11 @@ exports.Tokenizer = void 0;
 // 空白
 let space_reg = /^\s+/;
 // 字符串
-let string_reg1 = /^('+)(?<value>[\s\S]*?)'+/;
-let string_reg2 = /^("+)(?<value>[\s\S]*?)"+/;
-let string_reg3 = /^(`+)(?<value>[\s\S]*?)`+/;
+let string_reg1 = /^'+(?<value>[\s\S]*?)'+/;
+let string_reg2 = /^"+(?<value>[\s\S]*?)"+/;
+let string_reg3 = /^`+(?<value>[\s\S]*?)`+/;
 // let key_reg = /^[a-zA-Z0-9\$\_][a-zA-Z0-9\_\-\$]*/;
-// let sym_reg = /^[\`\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\'\"\;\:\,\.\/\<\>\?]*/;
+let sym_reg = /^\s*[\`\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\'\"\;\:\,\.\/\<\>\?]+\s*/;
 // 其他token
 let other_reg = /^[^\s\'\"\']+/;
 let n_reg = /\n/;
@@ -22851,6 +22862,8 @@ class Tokenizer {
         if (!v) {
             v = this.by_reg(any_reg) || '';
         }
+        let sym = this.by_reg(sym_reg) || '';
+        v = v + sym;
         let end_loc = this.get_loc();
         let token = tokenizer_generator(start_loc, end_loc, v, this.filename, this.source);
         return token;
@@ -22881,16 +22894,20 @@ class Tokenizer {
         while (!this.eof()) {
             let item = this.next();
             if (item !== undefined) {
-                let item2 = this.next();
-                if (item2 !== undefined) {
-                    let v = `${item.value}${item2.value}`;
-                    tokens.push(Object.assign(Object.assign({}, item), { start: item.start, end: item2.end, value: v }));
-                    stringtokens.push(v);
-                }
-                else {
-                    tokens.push(item);
-                    stringtokens.push(item.value);
-                }
+                // let item2 = this.next();
+                // if (item2 !== undefined) {
+                //   let v = `${item.value}${item2.value}`;
+                //   tokens.push({
+                //     ...item,
+                //     start: item.start,
+                //     end: item2.end,
+                //     value: v
+                //   });
+                //   stringtokens.push(v);
+                // } else {
+                tokens.push(item);
+                stringtokens.push(item.value);
+                // }
             }
         }
         this.tokens = tokens;

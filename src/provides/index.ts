@@ -21,9 +21,10 @@ export class Provider {
       return [];
     }
     this.loading++;
-    // console.time('changes');
+    
     let diff = await dupall(this.file, this.config.minTokens);
     this.diffs = keyBy(diff, 'key');
+    console.time('changes');
     for (let index = 0; index < p.length; index++) {
       const filename = p[index];
       let find = diff.reduce((res: IDuplication[], next) => {
@@ -46,7 +47,7 @@ export class Provider {
       this.setdiagnostics(filename, find);
     }
     this.loading--;
-    // console.timeEnd('changes');
+    console.timeEnd('changes');
     return diff;
   }
   setdiagnostics (filename: string, diff: IDuplication[]): void {
@@ -73,13 +74,13 @@ export class Provider {
     });
   }
   async onChange (filename: string): Promise<IDuplication[]> {
-    // console.time('change');
+    console.time('change');
     this.loading++;
     let diff = await dup(filename, this.file, this.config.minTokens);
     let diffs = keyBy(diff, 'key');
     Object.assign(this.diffs, diffs);
     this.setdiagnostics(filename, diff);
-    // console.timeEnd('change');
+    console.timeEnd('change');
     this.loading--;
     return diff;
   }
