@@ -4,7 +4,7 @@ import {
 } from 'vscode-languageserver';
 
 import { FileUtil } from './utils/files';
-import { Config, StartCommand, Command, ShowCommand, ShowQuickPickCommand, LoadingCommand, LoadingHideCommand } from './utils/config';
+import { Config, StartCommand, Command, ShowCommand, ShowQuickPickCommand, LoadingCommand, LoadingHideCommand, ChangeActiveTextCommand } from './utils/config';
 import { Provider } from './provides/index';
 import debounce from 'lodash-es/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -29,7 +29,7 @@ connection.onInitialize(async (params) => {
   files = new FileUtil(config);
   await files.exec();
   provider = new Provider(connection, files, config);
-  connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] Started and initialize received`);
+  connection.console.log(`[Init(${process.pid}) ${workspaceFolder}] Started`);
 
   let execute = debounce(async () => {
     if (provider.loading > 0) {
@@ -46,7 +46,7 @@ connection.onInitialize(async (params) => {
   let changeFn = debounce(async event => {
     let content = event.document.getText();
     let filename = Files.uriToFilePath(event.document.uri || '') || '';
-    connection.console.log(`==changed==  ${filename}`);
+    connection.console.log(`changeFn  ${filename}`);
     await files.put(filename, { content: content });
     provider.onChange(filename);
   }, config.debounceWait);
@@ -67,23 +67,20 @@ connection.onInitialize(async (params) => {
   });
 
   connection.onDidChangeConfiguration(debounce(async () => {
-    connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] onDidChangeConfiguration`);
+    connection.console.log(`[onDidChangeConfiguration(${process.pid}) ${workspaceFolder}]`);
     config && await config.changeConfig();
     await files.exec();
     await execute();
   }, config.debounceWait));
 
-
-
   documents.onDidOpen((event) => {
-    connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] Document opened: ${event.document.uri}`);
+    connection.console.log(`[onDidOpen(${process.pid}) ${workspaceFolder}] ${event.document.uri}`);
     changeFn(event);
   });
   documents.onDidChangeContent((event) => {
-    connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] Document changed: ${event.document.uri}`);
+    connection.console.log(`[onDidChangeContent(${process.pid}) ${workspaceFolder}] ${event.document.uri}`);
     changeFn(event);
   });
-
 
   connection.onExecuteCommand(async (params) => {
     if (params.command === Command) {
@@ -108,6 +105,14 @@ connection.onInitialize(async (params) => {
     }
     connection.sendNotification(ShowQuickPickCommand, [values(provider.diffs)]);
   });
+
+  connection.onNotification(ChangeActiveTextCommand, debounce((filename) => {
+    if (filename && files.paths.indexOf(filename) >= 0) {
+      connection.console.log(`[ChangeActiveTextCommand(${process.pid}) ${workspaceFolder}] ${filename}`);
+      provider.onChange(filename);
+    }
+  }, config.debounceWait));
+
   return {
     capabilities: {
       textDocumentSync: {

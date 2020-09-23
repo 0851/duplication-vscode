@@ -9,10 +9,11 @@ import {
   commands
 } from 'vscode';
 import { ServerOptions, TransportKind, LanguageClientOptions, LanguageClient } from 'vscode-languageclient';
-import { StartCommand, ServerId, ShowCommand, LoadingHideCommand, LoadingCommand, ShowQuickPickCommand } from './utils/config';
+import { StartCommand, ServerId, ShowCommand, LoadingHideCommand, LoadingCommand, ShowQuickPickCommand, ChangeActiveTextCommand } from './utils/config';
 import * as path from 'path';
 import { IDuplication } from '.';
 import { quickPick } from './provides/quickpick';
+import debounce from 'lodash-es/debounce';
 
 // 关闭最大监听数限制, worker 任务时会超过
 process.setMaxListeners(0);
@@ -87,6 +88,10 @@ export async function activate (context: ExtensionContext) {
   context.subscriptions.push(
     client.start()
   );
+
+  window.onDidChangeActiveTextEditor(debounce((event) => {
+    client.sendNotification(ChangeActiveTextCommand, [event?.document.uri.path]);
+  }));
 
   myStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 100);
   myStatusBarItem.command = ShowCommand;

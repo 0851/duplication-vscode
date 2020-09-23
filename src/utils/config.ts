@@ -5,6 +5,7 @@ export const ShowCommand = `extension.duplicationshow`;
 export const LoadingHideCommand = 'duplication.showQuickPickLoadingHide';
 export const LoadingCommand = 'duplication.showQuickPickLoading';
 export const ShowQuickPickCommand = 'duplication.showQuickPick';
+export const ChangeActiveTextCommand = 'duplication.ChangeActiveTextCommand';
 export const ServerId = 'Language Server Duplication';
 export class Config {
   data: { [key: string]: any } = {};
