@@ -1,12 +1,12 @@
 import { IConnection, DocumentUri, DiagnosticSeverity } from 'vscode-languageserver';
 export const Command = "extension.duplication";
-export const StartCommand = `extension.duplicationstart`;
+export const ExecStartCommand = `extension.duplicationstart`;
+export const ExecEndCommand = `extension.duplicationend`;
 export const ShowCommand = `extension.duplicationshow`;
-export const LoadingHideCommand = 'duplication.showQuickPickLoadingHide';
-export const LoadingCommand = 'duplication.showQuickPickLoading';
 export const ShowQuickPickCommand = 'duplication.showQuickPick';
 export const ChangeActiveTextCommand = 'duplication.ChangeActiveTextCommand';
 export const ServerId = 'Language Server Duplication';
+export const DebounceWait = 500;
 export class Config {
   data: { [key: string]: any } = {};
   constructor (public c: IConnection, public root: DocumentUri | null) {
@@ -50,7 +50,7 @@ export class Config {
     return this.data['duplication.minTokens'] || 50;
   }
   get debounceWait (): number {
-    return this.data['duplication.debounceWait'] || 500;
+    return this.data['duplication.debounceWait'] || DebounceWait;
   }
   get maxSize (): string {
     return this.data['duplication.maxSize'] || '100kb';

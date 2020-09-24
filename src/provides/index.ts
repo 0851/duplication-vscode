@@ -9,7 +9,6 @@ import { FileChangeType } from 'vscode-languageserver';
 export class Provider {
   file: FileUtil;
   diffs: { [key: string]: IDuplication } = {};
-  loading: number = 0;
   constructor (public context: IConnection, file: FileUtil, public config: Config) {
     this.context = context;
     this.config = config;
@@ -46,7 +45,6 @@ export class Provider {
     if (!this.config.root) {
       return [];
     }
-    this.loading++;
     let diff = await dupall(this.file, this.config.minTokens);
     this.diffs = keyBy(diff, 'key');
     this.filterdiff();
@@ -72,7 +70,6 @@ export class Provider {
       }, []);
       this.setdiagnostics(filename, find);
     }
-    this.loading--;
     console.timeEnd('changes');
     return diff;
   }
@@ -101,7 +98,6 @@ export class Provider {
   }
   async onChange (filename: string): Promise<IDuplication[]> {
     console.time(`change ${filename}`);
-    this.loading++;
     this.filternamediff(filename);
     let diff = await dup(filename, this.file, this.config.minTokens);
     let diffs = keyBy(diff, 'key');
@@ -109,7 +105,6 @@ export class Provider {
     this.filterdiff();
     this.setdiagnostics(filename, diff);
     console.timeEnd(`change ${filename}`);
-    this.loading--;
     return diff;
   }
 }

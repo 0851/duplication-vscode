@@ -4,8 +4,7 @@ import * as chokidar from 'chokidar';
 import { Config } from './config';
 import { IFile } from '../index.d';
 import {
-  performance,
-  PerformanceObserver
+  performance
 } from 'perf_hooks';
 
 export async function read (filepath: string): Promise<(IFile & { stats: fs.Stats }) | undefined> {

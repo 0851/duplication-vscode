@@ -22,9 +22,9 @@ export class FileUtil extends eventemitter3 {
     this.datas = {};
     this.config = config;
   }
-  async exec (): Promise<void> {
+  async getpaths () {
     if (!this.config.root) {
-      return;
+      return [];
     }
     console.time('globby');
     let paths = await globby(`${this.config.root}/**/*`, {
@@ -40,6 +40,10 @@ export class FileUtil extends eventemitter3 {
       expandDirectories: true
     });
     console.timeEnd('globby');
+    return paths;
+  }
+  async exec (): Promise<void> {
+    let paths = await this.getpaths();
     await this.reads(paths);
   }
   //计算汉明距离
