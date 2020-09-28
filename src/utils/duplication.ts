@@ -1,6 +1,7 @@
 import { IDuplication, IFileToken, IToken } from '../index.d';
 import { FileUtil } from './files';
 import { filterCombine } from './combine';
+import { Config } from './config';
 
 export function dupone (astringtokens: string[], bstringtokens: string[]): { [key: string]: number } {
 
@@ -31,10 +32,11 @@ export function dupone (astringtokens: string[], bstringtokens: string[]): { [ke
   return map;
 }
 
-function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IToken[], maxlen: number): IDuplication[] {
+function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IToken[], maxlen: number, minLine: number): IDuplication[] {
   let res: IDuplication[] = [];
   let keys = Object.keys(map);
   let k = keys.length;
+  let resmap: { [key: string]: boolean } = {};
   for (let index = 0; index < k; index++) {
     const key = keys[index];
     let end = map[key];
@@ -68,19 +70,28 @@ function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IT
       let bcontent = bendtoken.content;
       let bstart = bstarttoken.start;
       let bend = bendtoken.end;
+      let mapkey = `${afilename}_${bfilename}_${astart.pos}_${bstart.pos}_${aend.pos}_${bend.pos}`;
+
+      if (resmap[mapkey] === true) {
+        continue;
+      }
+
+      if ((bend.line - bstart.line) < minLine && (aend.line - astart.line) < minLine) {
+        continue;
+      }
+
+      resmap[mapkey] = true;
 
       let diff = {
-        key: `${afilename}_${bfilename}_${astart.pos}_${bstart.pos}_${aend.pos}_${bend.pos}`,
+        key: mapkey,
         a: {
           filename: afilename,
           start: astart,
-          value: acontent.slice(astart.pos, aend.pos),
           end: aend
         },
         b: {
           filename: bfilename,
           start: bstart,
-          value: bcontent.slice(bstart.pos, bend.pos),
           end: bend
         }
       };
@@ -89,7 +100,7 @@ function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IT
   }
   return res;
 }
-function _dup (comb: string[], file: FileUtil, maxlen: number): IDuplication[] {
+function _dup (comb: string[], file: FileUtil, config: Config): IDuplication[] {
   let afile: IFileToken;
   let bfile: IFileToken;
   let datas = file.datas;
@@ -99,15 +110,15 @@ function _dup (comb: string[], file: FileUtil, maxlen: number): IDuplication[] {
     return [];
   }
   let map = dupone(afile.stringtokens, bfile.stringtokens);
-  return makedup(map, afile.tokens, bfile.tokens, maxlen);
+  return makedup(map, afile.tokens, bfile.tokens, config.minTokens, config.minLine);
 }
 
 
-async function split (combs: string[][], file: FileUtil, maxlen: number): Promise<IDuplication[]> {
+async function split (combs: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
   let comb;
   let res: IDuplication[] = [];
   while (comb = combs.shift()) {
-    let t = _dup(comb, file, maxlen);
+    let t = _dup(comb, file, config);
     Array.prototype.push.apply(res, t);
   }
   return res;
@@ -120,7 +131,7 @@ function sleep (time: number = 100) {
     }, time);
   });
 }
-async function dupeach (combines: string[][], file: FileUtil, maxlen: number): Promise<IDuplication[]> {
+async function dupeach (combines: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
   // let allcombs = [...combines];
   // let res: IDuplication[] = [];
   // let actions = [];
@@ -138,25 +149,25 @@ async function dupeach (combines: string[][], file: FileUtil, maxlen: number): P
   let res: IDuplication[] = [];
   let count = 0;
   while (comb = combs.shift()) {
-    let t = _dup(comb, file, maxlen);
+    let t = _dup(comb, file, config);
     Array.prototype.push.apply(res, t);
     count++;
     if (count > 2000) {
       count = 0;
-      await sleep();
+      await sleep(100);
     }
   }
   return res;
 }
-export async function dup (filename: string, file: FileUtil, maxlen: number): Promise<IDuplication[]> {
+export async function dup (filename: string, file: FileUtil, config: Config): Promise<IDuplication[]> {
   let combs = filterCombine(file.combines, filename);
-  return await dupeach(combs, file, maxlen);
+  return await dupeach(combs, file, config);
 }
 
-export async function dupall (file: FileUtil, maxlen: number): Promise<IDuplication[]> {
+export async function dupall (file: FileUtil, config: Config): Promise<IDuplication[]> {
   let combs = file.combines;
   console.time('dupall');
-  let res = await dupeach(combs, file, maxlen);
+  let res = await dupeach(combs, file, config);
   console.timeEnd('dupall');
   return res;
 }

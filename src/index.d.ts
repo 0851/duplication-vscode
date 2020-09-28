@@ -40,6 +40,6 @@ export type IShingles = {
 
 export interface IDuplication {
   key: string
-  a: Omit<IToken, 'content'>
-  b: Omit<IToken, 'content'>
+  a: Omit<IToken, 'content' | 'value'>
+  b: Omit<IToken, 'content' | 'value'>
 }

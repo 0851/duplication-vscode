@@ -4,15 +4,16 @@ import {
   Uri,
   window,
   ViewColumn,
-  QuickPickItem
+  QuickPickItem,
+  commands
 } from 'vscode';
 import { IToken, IDuplication } from '../index.d';
 
-const decoration = window.createTextEditorDecorationType({
-  backgroundColor: "rgba(255,0,0,0.3)"
-});
+// const decoration = window.createTextEditorDecorationType({
+//   backgroundColor: "rgba(255,0,0,0.3)"
+// });
 
-async function showDiff (a: Omit<IToken, 'content'>, b: Omit<IToken, 'content'>) {
+async function showDiff (a: Omit<IToken, 'content' | 'value'>, b: Omit<IToken, 'content' | 'value'>) {
   let auri = Uri.parse(a.filename);
   let buri = Uri.parse(b.filename);
   let [adocOpen, bdocOpen] = await Promise.all([workspace.openTextDocument(auri), workspace.openTextDocument(buri)]);
@@ -20,14 +21,14 @@ async function showDiff (a: Omit<IToken, 'content'>, b: Omit<IToken, 'content'>)
 
   let arange = new Range(a.start.line - 1, a.start.col - 1, a.end.line - 1, a.end.col - 1);
   let brange = new Range(b.start.line - 1, b.start.col - 1, b.end.line - 1, b.end.col - 1);
-  adoc.setDecorations(decoration, [{
-    range: arange,
-    hoverMessage: `Matchs ${a.filename}:${b.filename}`
-  }]);
-  bdoc.setDecorations(decoration, [{
-    range: brange,
-    hoverMessage: `Matchs ${b.filename}:${a.filename}`
-  }]);
+  // adoc.setDecorations(decoration, [{
+  //   range: arange,
+  //   hoverMessage: `Matchs ${a.filename}:${b.filename}`
+  // }]);
+  // bdoc.setDecorations(decoration, [{
+  //   range: brange,
+  //   hoverMessage: `Matchs ${b.filename}:${a.filename}`
+  // }]);
   adoc.revealRange(arange);
   bdoc.revealRange(brange);
 }
@@ -50,5 +51,7 @@ export async function quickPick (diff: IDuplication[], root: string) {
   if (!find) {
     return;
   }
+  // commands.executeCommand('vscode.diff', Uri.parse(find.a.filename), Uri.parse(find.b.filename), find.label);
   showDiff(find.a, find.b);
+
 }

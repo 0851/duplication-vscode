@@ -5,6 +5,7 @@ export const ExecEndCommand = `extension.duplicationend`;
 export const ShowCommand = `extension.duplicationshow`;
 export const ShowQuickPickCommand = 'duplication.showQuickPick';
 export const ChangeActiveTextCommand = 'duplication.ChangeActiveTextCommand';
+export const ChangeResultCommand = 'duplication.ChangeResultCommand';
 export const ServerId = 'Language Server Duplication';
 export const DebounceWait = 500;
 export class Config {
@@ -43,11 +44,15 @@ export class Config {
       "out",
       "dist",
       "build",
-      "logs"
+      "logs",
+      "mock"
     ];
   }
   get minTokens (): number {
-    return this.data['duplication.minTokens'] || 50;
+    return this.data['duplication.minTokens'] || 30;
+  }
+  get minLine (): number {
+    return this.data['duplication.minLine'] || 5;
   }
   get debounceWait (): number {
     return this.data['duplication.debounceWait'] || DebounceWait;

@@ -5,7 +5,7 @@ import {
 } from 'vscode-languageserver';
 
 import { FileUtil } from './utils/files';
-import { Config, ExecStartCommand, ExecEndCommand, ChangeActiveTextCommand } from './utils/config';
+import { Config, ExecStartCommand, ExecEndCommand, ChangeActiveTextCommand, ChangeResultCommand } from './utils/config';
 import { Provider } from './provides/index';
 import debounce from 'lodash-es/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -35,7 +35,6 @@ connection.onInitialize(async (params) => {
   connection.console.log(`[Init(${process.pid}) ${workspaceFolder}] Started`);
 
   connection.onDidChangeWatchedFiles(debounce(async (_change: DidChangeWatchedFilesParams) => {
-    let actions = [];
     let created = _change.changes.findIndex((change) => {
       return change.type === FileChangeType.Created;
     });
@@ -49,13 +48,11 @@ connection.onInitialize(async (params) => {
         continue;
       }
       let type = change.type;
-      actions.push((async (type, filename) => {
-        connection.console.log(`File Changed ${filename} ${type}`);
-        await files.update(type, filename);
-        provider.fixdiff(type, filename);
-      })(type, filename));
+      connection.console.log(`File Changed ${filename} ${type}`);
+      await files.update(type, filename);
+      await provider.onChange(filename);
+      connection.sendNotification(ChangeResultCommand, [values(provider.diffs)]);
     }
-    await Promise.all(actions);
   }, config.debounceWait));
 
   connection.onNotification(ExecStartCommand, debounce(async () => {
@@ -73,7 +70,8 @@ connection.onInitialize(async (params) => {
     if (content) {
       await files.put(filename, { content: content });
     }
-    provider.onChange(filename);
+    await provider.onChange(filename);
+    connection.sendNotification(ChangeResultCommand, [values(provider.diffs)]);
   };
 
   documents.onDidChangeContent(debounce(async (event) => {

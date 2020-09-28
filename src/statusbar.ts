@@ -2,7 +2,7 @@
 import * as eventemitter3 from 'eventemitter3';
 import { StatusBarItem, window, StatusBarAlignment, ExtensionContext, commands, workspace } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
-import { ShowCommand, ExecStartCommand, ExecEndCommand, ShowQuickPickCommand, Command } from './utils/config';
+import { ShowCommand, ExecStartCommand, ExecEndCommand, ChangeResultCommand, Command } from './utils/config';
 import { IDuplication } from '.';
 
 export class StatusBar extends eventemitter3 {
@@ -37,6 +37,18 @@ export class StatusBar extends eventemitter3 {
   ing () {
     window.showInformationMessage(this.loadingtext);
   }
+  changeResult (res: IDuplication[]) {
+    if (this.loading > 0) {
+      return;
+    }
+    this.resbar.text = `${res.length}项重复`;
+    this.resbar.tooltip = `${res.length}项重复`;
+    this.execbar.text = '重新检查重复';
+    this.execbar.tooltip = '重新检查重复';
+    this.execbar.show();
+    this.execbar.show();
+    this.res = res;
+  }
   async execListener () {
     await this.client.onReady();
     this.exec();
@@ -60,13 +72,10 @@ export class StatusBar extends eventemitter3 {
     }));
     this.client.onNotification(ExecEndCommand, (res: IDuplication[]) => {
       this.loading--;
-      this.resbar.text = `${res.length}项重复`;
-      this.resbar.tooltip = `${res.length}项重复`;
-      this.execbar.text = '重新检查重复';
-      this.execbar.tooltip = '重新检查重复';
-      this.execbar.show();
-      this.execbar.show();
-      this.res = res;
+      this.changeResult(res);
+    });
+    this.client.onNotification(ChangeResultCommand, (res: IDuplication[]) => {
+      this.changeResult(res);
     });
   }
 }

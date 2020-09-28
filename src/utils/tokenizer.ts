@@ -6,16 +6,16 @@ let string_reg1 = /^'+(?<value>[\s\S]*?)'+/;
 let string_reg2 = /^"+(?<value>[\s\S]*?)"+/;
 let string_reg3 = /^`+(?<value>[\s\S]*?)`+/;
 
-// let key_reg = /^[a-zA-Z0-9\$\_][a-zA-Z0-9\_\-\$]*/;
+let key_reg = /^[a-zA-Z0-9\$\_][a-zA-Z0-9\_\-\$\.]*/;
 
-let sym_reg = /^\s*[\`\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\'\"\;\:\,\.\/\<\>\?]+\s*/;
+let sym_reg = /^[\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\;\:\,\.\/\<\>\?]+/;
+
+let number_reg = /^[0-9]*[0-9a-fA-FeE\-\+\.]+/;
 
 // 其他token
-let other_reg = /^[^\s\'\"\']+/;
-
 let n_reg = /\n/;
 
-let any_reg = /^.+/;
+let any_reg = /^.+?(?=\s|$)/;
 
 function tokenizer_generator (
   start: ILoc,
@@ -35,7 +35,6 @@ function tokenizer_generator (
 
 class Tokenizer {
   readonly source: string;
-  private peek_stack: IToken[];
   private pos: number;
   private line: number;
   private col: number;
@@ -45,7 +44,6 @@ class Tokenizer {
     this.input = input;
     this.source = input;
     this.filename = filename;
-    this.peek_stack = [];
     this.pos = 0;
     this.line = 1;
     this.col = 1;
@@ -90,34 +88,43 @@ class Tokenizer {
     return source;
   }
   next (): IToken | undefined {
-    if (this.peek_stack.length > 0) {
-      return this.peek_stack.shift();
-    }
     // 去掉空
-    this.by_reg(space_reg);
-    if (this.input.length <= 0) {
+    let empty = this.by_reg(space_reg);
+    if (empty !== undefined) {
+      return undefined;
+    }
+    // 特殊字符
+    let sym = this.by_reg(sym_reg);
+    if (sym !== undefined && this.tokens.length > 0) {
+      let endtoken = this.tokens[this.tokens.length - 1];
+      this.by_reg(space_reg);
+      this.tokens[this.tokens.length - 1] = {
+        ...endtoken,
+        end: this.get_loc(),
+        value: `${endtoken.value}${sym}`
+      };
       return undefined;
     }
     let start_loc = this.get_loc();
-
     let v = this.by_reg(string_reg1);
     if (!v) {
-      v = this.by_reg(string_reg2) || '';
+      v = this.by_reg(string_reg2);
     }
     if (!v) {
-      v = this.by_reg(string_reg3) || '';
+      v = this.by_reg(string_reg3);
     }
     if (!v) {
-      v = this.by_reg(other_reg) || '';
+      v = this.by_reg(key_reg);
     }
     if (!v) {
-      v = this.by_reg(any_reg) || '';
+      v = this.by_reg(number_reg);
     }
-
-    let sym = this.by_reg(sym_reg) || '';
-
-    v = v + sym;
-
+    if (!v) {
+      v = this.by_reg(any_reg);
+    }
+    if (!v) {
+      return undefined;
+    }
     let end_loc = this.get_loc();
     let token = tokenizer_generator(start_loc, end_loc, v, this.filename, this.source);
     return token;
@@ -132,41 +139,21 @@ class Tokenizer {
     }
     this.col = this.col + i;
   }
-  peek (): undefined | IToken {
-    let next = this.next();
-    if (next) {
-      this.peek_stack.push(next);
-    }
-    return this.peek_stack[0];
-  }
   eof (): boolean {
-    return this.peek() === undefined;
+    return this.input.length <= 0;
   }
   next_all (): IToken[] {
-    let tokens: IToken[] = [];
-    let stringtokens: string[] = [];
+    this.tokens = [];
     while (!this.eof()) {
       let item = this.next();
       if (item !== undefined) {
-        // let item2 = this.next();
-        // if (item2 !== undefined) {
-        //   let v = `${item.value}${item2.value}`;
-        //   tokens.push({
-        //     ...item,
-        //     start: item.start,
-        //     end: item2.end,
-        //     value: v
-        //   });
-        //   stringtokens.push(v);
-        // } else {
-        tokens.push(item);
-        stringtokens.push(item.value);
-        // }
+        this.tokens.push(item);
       }
     }
-    this.tokens = tokens;
-    this.stringtokens = stringtokens;
-    return tokens;
+    this.stringtokens = this.tokens.map((token) => {
+      return token.value;
+    });
+    return this.tokens;
   }
 }
 export default Tokenizer;

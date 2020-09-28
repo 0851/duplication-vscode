@@ -4,7 +4,6 @@ import { IDuplication } from '../index.d';
 import { dup, dupall } from '../utils/duplication';
 import { IConnection, Diagnostic, DiagnosticRelatedInformation, Location, Range } from 'vscode-languageserver';
 import keyBy from 'lodash-es/keyBy';
-import { FileChangeType } from 'vscode-languageserver';
 
 export class Provider {
   file: FileUtil;
@@ -14,28 +13,23 @@ export class Provider {
     this.config = config;
     this.file = file;
   }
-  fixdiff (event: FileChangeType, filename: string) {
-    if (event === FileChangeType.Deleted) {
-      this.filternamediff(filename);
-    } else {
-      this.onChange(filename);
-    }
-  }
-  filternamediff (filename: string) {
-    this.diffs = Object.keys(this.diffs).reduce((res: { [key: string]: IDuplication } = {}, item: string) => {
-      if (item.indexOf(filename) < 0) {
-        res[item] = this.diffs[item];
+  cleardiff (filename: string) {
+    let keys = Object.keys(this.diffs);
+    this.diffs = keys.reduce((res: { [key: string]: IDuplication } = {}, key: string) => {
+      if (key.indexOf(filename) < 0) {
+        res[key] = this.diffs[key];
       }
       return res;
     }, {});
   }
   filterdiff () {
-    this.diffs = Object.keys(this.diffs).reduce((res: { [key: string]: IDuplication } = {}, item: string) => {
+    let keys = Object.keys(this.diffs);
+    this.diffs = keys.reduce((res: { [key: string]: IDuplication } = {}, key: string) => {
       let find = this.file.paths.find((path) => {
-        return item.indexOf(path) > -1;
+        return key.indexOf(path) > -1;
       });
       if (find) {
-        res[item] = this.diffs[item];
+        res[key] = this.diffs[key];
       }
       return res;
     }, {});
@@ -45,7 +39,7 @@ export class Provider {
     if (!this.config.root) {
       return [];
     }
-    let diff = await dupall(this.file, this.config.minTokens);
+    let diff = await dupall(this.file, this.config);
     this.diffs = keyBy(diff, 'key');
     this.filterdiff();
     console.time('changes');
@@ -98,8 +92,8 @@ export class Provider {
   }
   async onChange (filename: string): Promise<IDuplication[]> {
     console.time(`change ${filename}`);
-    this.filternamediff(filename);
-    let diff = await dup(filename, this.file, this.config.minTokens);
+    this.cleardiff(filename);
+    let diff = await dup(filename, this.file, this.config);
     let diffs = keyBy(diff, 'key');
     Object.assign(this.diffs, diffs);
     this.filterdiff();
