@@ -43,3 +43,9 @@ export interface IDuplication {
   a: Omit<IToken, 'content' | 'value'>
   b: Omit<IToken, 'content' | 'value'>
 }
+export interface IFORMATS {
+  [key: string]: {
+    exts: string[],
+    parent?: string
+  }
+}

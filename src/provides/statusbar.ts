@@ -1,9 +1,9 @@
 
 import * as eventemitter3 from 'eventemitter3';
-import { StatusBarItem, window, StatusBarAlignment, ExtensionContext, commands, workspace } from 'vscode';
+import { StatusBarItem, window, StatusBarAlignment, ExtensionContext } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
-import { ShowCommand, ExecStartCommand, ExecEndCommand, ChangeResultCommand, Command } from './utils/config';
-import { IDuplication } from '.';
+import { ShowCommand, ExecStartCommand } from '../utils/config';
+import { IDuplication } from '..';
 
 export class StatusBar extends eventemitter3 {
   loading: number = 0;
@@ -22,7 +22,6 @@ export class StatusBar extends eventemitter3 {
     this.resbar.command = ShowCommand;
     this.resbar.show();
     this.execbar.show();
-    this.execListener();
   }
   async exec () {
     if (this.loading > 0) {
@@ -48,34 +47,5 @@ export class StatusBar extends eventemitter3 {
     this.execbar.show();
     this.execbar.show();
     this.res = res;
-  }
-  async execListener () {
-    await this.client.onReady();
-    this.exec();
-    workspace.onDidChangeConfiguration(() => {
-      console.log('===onDidChangeConfiguration===');
-      this.exec();
-    });
-    this.context.subscriptions.push(commands.registerCommand(Command, () => { this.exec(); }));
-    this.context.subscriptions.push(commands.registerCommand(ExecStartCommand, () => { this.exec(); }));
-    this.context.subscriptions.push(commands.registerCommand(ShowCommand, () => {
-      if (this.loading > 0) {
-        this.ing();
-        return;
-      }
-      if (this.res.length <= 0) {
-        window.showInformationMessage('无重复.');
-      }
-      if (workspace.workspaceFolders) {
-        this.emit('showquickpick', this.res, workspace.workspaceFolders[0].uri.path);
-      }
-    }));
-    this.client.onNotification(ExecEndCommand, (res: IDuplication[]) => {
-      this.loading--;
-      this.changeResult(res);
-    });
-    this.client.onNotification(ChangeResultCommand, (res: IDuplication[]) => {
-      this.changeResult(res);
-    });
   }
 }

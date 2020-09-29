@@ -4,6 +4,7 @@ import { IDuplication } from '../index.d';
 import { dup, dupall } from '../utils/duplication';
 import { IConnection, Diagnostic, DiagnosticRelatedInformation, Location, Range } from 'vscode-languageserver';
 import keyBy from 'lodash-es/keyBy';
+import { removeroot } from '../utils';
 
 export class Provider {
   file: FileUtil;
@@ -76,9 +77,18 @@ export class Provider {
     diff.forEach((obj) => {
       let range = Range.create(obj.a.start.line - 1, obj.a.start.col - 1, obj.a.end.line - 1, obj.a.end.col - 1);
       let otherRange = Range.create(obj.b.start.line - 1, obj.b.start.col - 1, obj.b.end.line - 1, obj.b.end.col - 1);
-      let diagnostic = Diagnostic.create(range, `duplication`, this.config.severity);
+      let diagnostic = Diagnostic.create(
+        range,
+        `duplication`,
+        this.config.severity
+      );
       if (diagnostic) {
-        diagnostic.relatedInformation = [DiagnosticRelatedInformation.create(Location.create(obj.b.filename, otherRange), 'duplication')];
+        diagnostic.relatedInformation = [
+          DiagnosticRelatedInformation.create(
+            Location.create(obj.b.filename, otherRange),
+            `${removeroot(obj.b.filename, this.config.root || '')}`
+          )
+        ];
         diagnostics.push(diagnostic);
       }
     });

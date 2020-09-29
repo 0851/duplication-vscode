@@ -1,4 +1,4 @@
-import { read, hasOwnProperty } from './index';
+import { read, hasOwnProperty, getfileext } from './index';
 import * as fs from 'fs';
 import * as globby from 'globby';
 import * as bytes from 'bytes';
@@ -8,6 +8,7 @@ import { Tokenizer } from './tokenizer';
 import { IFile, IFileData, IShingles, IToken } from '../index.d';
 import { arrayCombine } from '../utils/combine';
 import { FileChangeType } from 'vscode-languageserver';
+import { getexts } from './formats';
 
 
 export class FileUtil extends eventemitter3 {
@@ -104,7 +105,21 @@ export class FileUtil extends eventemitter3 {
     this.paths = paths;
     this.tokens = tokens;
     let allcombine = arrayCombine(this.paths, 2);
-    this.combines = allcombine;
+    this.combines = allcombine.reduce((res: string[][], item) => {
+      let [a, b] = item;
+      let aext = getfileext(a);
+      let bext = getfileext(b);
+      if (aext === undefined || bext === undefined) {
+        return res;
+      }
+      // 按文件后缀过滤不属于同一分组的文件, 对比不同类型文件没有意义
+      let exts = getexts(aext);
+      if (exts.includes(bext)) {
+        res.push(item);
+      }
+      return res;
+    }, []);
+    // console.log(this.combines, '======this.combines======');
     console.timeEnd('pathGroupGenerator');
   }
   remove (filepath: string): void {

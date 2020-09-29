@@ -8,6 +8,7 @@ import {
   commands
 } from 'vscode';
 import { IToken, IDuplication } from '../index.d';
+import { removeroot } from '../utils';
 
 // const decoration = window.createTextEditorDecorationType({
 //   backgroundColor: "rgba(255,0,0,0.3)"
@@ -31,13 +32,6 @@ async function showDiff (a: Omit<IToken, 'content' | 'value'>, b: Omit<IToken, '
   // }]);
   adoc.revealRange(arange);
   bdoc.revealRange(brange);
-}
-
-function removeroot (p: string, root: string | undefined): string {
-  if (root === undefined) {
-    return p;
-  }
-  return p.replace(new RegExp(`^${root}/`, 'i'), '');
 }
 
 export async function quickPick (diff: IDuplication[], root: string) {
