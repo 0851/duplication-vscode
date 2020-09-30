@@ -2,7 +2,7 @@
 	"name": "duplication-vscode",
 	"displayName": "duplication-vscode",
 	"description": "检查重复代码",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"publisher": "0851",
 	"engines": {
 		"vscode": "^1.47.0"
@@ -53,22 +53,22 @@
 					"duplication.ignore": {
 						"type": "array",
 						"default": [
-							"node_modules/**/*",
-							"bower_components",
-							"jspm_packages",
-							"web_modules",
-							".cache",
-							".history",
-							".yarn/cache",
-							".vscode-test",
-							".idea",
-							".vscode",
-							".git",
-							"out",
-							"dist",
-							"build",
-							"logs",
-							"mock"
+							"**/node_modules/**/*",
+							"**/bower_components",
+							"**/jspm_packages",
+							"**/web_modules",
+							"**/.cache",
+							"**/.history",
+							"**/.yarn/cache",
+							"**/.vscode-test",
+							"**/.idea",
+							"**/.vscode",
+							"**/.git",
+							"**/out",
+							"**/dist",
+							"**/build",
+							"**/logs",
+							"**/mock"
 						],
 						"items": {
 							"type": "string"
