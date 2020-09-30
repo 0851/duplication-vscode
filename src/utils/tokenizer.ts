@@ -1,4 +1,7 @@
 import { IToken, ILoc } from '../index.d';
+
+// 常规的注释 https://zh.wikipedia.org/wiki/%E6%B3%A8%E9%87%8A_(%E8%AE%A1%E7%AE%97%E6%9C%BA%E8%AF%AD%E8%A8%80)
+
 // 空白
 let space_reg = /^\s+/;
 // 字符串
