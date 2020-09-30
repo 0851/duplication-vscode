@@ -1,27 +1,34 @@
 import {
-  workspace,
-  Range,
   Uri,
   window,
   ViewColumn,
   QuickPickItem,
-  commands
+  workspace,
+  Range
 } from 'vscode';
-import { IToken, IDuplication } from '../index.d';
-import { removeroot } from '../utils';
+import { IDuplication, IDuplicationToken } from '../index.d';
+import { removeRoot } from '../utils';
 
-// const decoration = window.createTextEditorDecorationType({
-//   backgroundColor: "rgba(255,0,0,0.3)"
-// });
+export async function openFile (uri: Uri, token?: IDuplicationToken, column?: ViewColumn) {
+  let opened = await workspace.openTextDocument(uri);
+  let doc = await window.showTextDocument(opened, column);
+  if (token) {
+    let range = new Range(token.start.line - 1, token.start.col - 1, token.end.line - 1, token.end.col - 1);
+    doc.revealRange(range);
+  }
+  return doc;
+}
 
-async function showDiff (a: Omit<IToken, 'content' | 'value'>, b: Omit<IToken, 'content' | 'value'>) {
+async function showDiff (a: IDuplicationToken, b: IDuplicationToken) {
   let auri = Uri.parse(a.filename);
   let buri = Uri.parse(b.filename);
-  let [adocOpen, bdocOpen] = await Promise.all([workspace.openTextDocument(auri), workspace.openTextDocument(buri)]);
-  let [adoc, bdoc] = await Promise.all([window.showTextDocument(adocOpen, ViewColumn.One), window.showTextDocument(bdocOpen, ViewColumn.Two)]);
-
-  let arange = new Range(a.start.line - 1, a.start.col - 1, a.end.line - 1, a.end.col - 1);
-  let brange = new Range(b.start.line - 1, b.start.col - 1, b.end.line - 1, b.end.col - 1);
+  let [adoc, bdoc] = await Promise.all([
+    openFile(auri, a, ViewColumn.One),
+    openFile(buri, b, ViewColumn.Two)
+  ]);
+  // const decoration = window.createTextEditorDecorationType({
+  //   backgroundColor: "rgba(255,0,0,0.3)"
+  // });
   // adoc.setDecorations(decoration, [{
   //   range: arange,
   //   hoverMessage: `Matchs ${a.filename}:${b.filename}`
@@ -30,14 +37,12 @@ async function showDiff (a: Omit<IToken, 'content' | 'value'>, b: Omit<IToken, '
   //   range: brange,
   //   hoverMessage: `Matchs ${b.filename}:${a.filename}`
   // }]);
-  adoc.revealRange(arange);
-  bdoc.revealRange(brange);
 }
 
 export async function quickPick (diff: IDuplication[], root: string) {
   let picks: (QuickPickItem & IDuplication)[] = diff.map((item) => {
     return {
-      label: `${removeroot(item.a.filename, root)}:${item.a.start.line} <==> ${removeroot(item.b.filename, root)}:${item.b.start.line}`,
+      label: `${removeRoot(item.a.filename, root)}:${item.a.start.line} <==> ${removeRoot(item.b.filename, root)}:${item.b.start.line}`,
       ...item
     };
   });

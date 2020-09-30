@@ -21804,10 +21804,10 @@ module.exports = function(originalModule) {
 
 /***/ }),
 
-/***/ "./src/provides/index.ts":
-/*!*******************************!*\
-  !*** ./src/provides/index.ts ***!
-  \*******************************/
+/***/ "./src/provides/diff.ts":
+/*!******************************!*\
+  !*** ./src/provides/diff.ts ***!
+  \******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -21878,7 +21878,7 @@ class Provider {
                             b: next.b
                         });
                     }
-                    if (next.b.filename === filename && next.a.filename !== filename) {
+                    else if (next.b.filename === filename) {
                         res.push({
                             key: next.key,
                             a: next.b,
@@ -21905,7 +21905,7 @@ class Provider {
             let diagnostic = vscode_languageserver_1.Diagnostic.create(range, `duplication`, this.config.severity);
             if (diagnostic) {
                 diagnostic.relatedInformation = [
-                    vscode_languageserver_1.DiagnosticRelatedInformation.create(vscode_languageserver_1.Location.create(obj.b.filename, otherRange), `${utils_1.removeroot(obj.b.filename, this.config.root || '')}`)
+                    vscode_languageserver_1.DiagnosticRelatedInformation.create(vscode_languageserver_1.Location.create(obj.b.filename, otherRange), `${utils_1.removeRoot(obj.b.filename, this.config.root || '')}`)
                 ];
                 diagnostics.push(diagnostic);
             }
@@ -21959,7 +21959,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const vscode_languageserver_1 = __webpack_require__(/*! vscode-languageserver */ "./node_modules/vscode-languageserver/lib/main.js");
 const files_1 = __webpack_require__(/*! ./utils/files */ "./src/utils/files.ts");
 const config_1 = __webpack_require__(/*! ./utils/config */ "./src/utils/config.ts");
-const index_1 = __webpack_require__(/*! ./provides/index */ "./src/provides/index.ts");
+const diff_1 = __webpack_require__(/*! ./provides/diff */ "./src/provides/diff.ts");
 const debounce_1 = __webpack_require__(/*! lodash-es/debounce */ "./node_modules/lodash-es/debounce.js");
 const vscode_languageserver_textdocument_1 = __webpack_require__(/*! vscode-languageserver-textdocument */ "./node_modules/vscode-languageserver-textdocument/lib/esm/main.js");
 const values_1 = __webpack_require__(/*! lodash-es/values */ "./node_modules/lodash-es/values.js");
@@ -21978,7 +21978,7 @@ connection.onInitialize((params) => __awaiter(void 0, void 0, void 0, function* 
     }
     config = new config_1.Config(connection, vscode_languageserver_1.Files.uriToFilePath(workspaceFolder || '') || '');
     files = new files_1.FileUtil(config);
-    provider = new index_1.Provider(connection, files, config);
+    provider = new diff_1.Provider(connection, files, config);
     connection.console.log(`[Init(${process.pid}) ${workspaceFolder}] Started`);
     connection.onDidChangeWatchedFiles(debounce_1.default((_change) => __awaiter(void 0, void 0, void 0, function* () {
         let created = _change.changes.findIndex((change) => {
@@ -22000,7 +22000,7 @@ connection.onInitialize((params) => __awaiter(void 0, void 0, void 0, function* 
             connection.sendNotification(config_1.ChangeResultCommand, [values_1.default(provider.diffs)]);
         }
     }), config.debounceWait));
-    connection.onNotification(config_1.ExecStartCommand, debounce_1.default(() => __awaiter(void 0, void 0, void 0, function* () {
+    connection.onNotification(config_1.MainCommand, debounce_1.default(() => __awaiter(void 0, void 0, void 0, function* () {
         config && (yield config.changeConfig());
         yield files.exec();
         yield provider.onChanges();
@@ -22148,14 +22148,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Config = exports.DebounceWait = exports.ServerId = exports.ChangeResultCommand = exports.ChangeActiveTextCommand = exports.ShowQuickPickCommand = exports.ShowCommand = exports.ExecEndCommand = exports.ExecStartCommand = exports.Command = void 0;
-exports.Command = "extension.duplication";
-exports.ExecStartCommand = `extension.duplicationstart`;
-exports.ExecEndCommand = `extension.duplicationend`;
-exports.ShowCommand = `extension.duplicationshow`;
+exports.Config = exports.DebounceWait = exports.ServerId = exports.TreeRefreshCommand = exports.OpenFileCommand = exports.ChangeResultCommand = exports.ChangeActiveTextCommand = exports.ShowQuickPickCommand = exports.ShowCommand = exports.ExecEndCommand = exports.MainCommand = void 0;
+exports.MainCommand = "extension.duplication.exec";
+exports.ExecEndCommand = `extension.duplication.end`;
+exports.ShowCommand = `extension.duplication.show`;
 exports.ShowQuickPickCommand = 'duplication.showQuickPick';
 exports.ChangeActiveTextCommand = 'duplication.ChangeActiveTextCommand';
 exports.ChangeResultCommand = 'duplication.ChangeResultCommand';
+exports.OpenFileCommand = `extension.duplication.open`;
+exports.TreeRefreshCommand = `extension.duplication.treeview.refresh`;
 exports.ServerId = 'Language Server Duplication';
 exports.DebounceWait = 500;
 class Config {
@@ -22539,8 +22540,8 @@ class FileUtil extends eventemitter3 {
         let allcombine = combine_1.arrayCombine(this.paths, 2);
         this.combines = allcombine.reduce((res, item) => {
             let [a, b] = item;
-            let aext = index_1.getfileext(a);
-            let bext = index_1.getfileext(b);
+            let aext = index_1.getFileExt(a);
+            let bext = index_1.getFileExt(b);
             if (aext === undefined || bext === undefined) {
                 return res;
             }
@@ -23164,24 +23165,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exec = exports.execAsync = exports.hasOwnProperty = exports.watch = exports.read = exports.getfileext = exports.removeroot = void 0;
+exports.exec = exports.execAsync = exports.hasOwnProperty = exports.watch = exports.read = exports.getFileExt = exports.removeRoot = void 0;
 const fs = __webpack_require__(/*! fs */ "fs");
 const pify = __webpack_require__(/*! pify */ "./node_modules/pify/index.js");
 const chokidar = __webpack_require__(/*! chokidar */ "chokidar");
 const path = __webpack_require__(/*! path */ "path");
 const perf_hooks_1 = __webpack_require__(/*! perf_hooks */ "perf_hooks");
-function removeroot(p, root) {
+function removeRoot(p, root) {
     if (root === undefined) {
         return p;
     }
     return p.replace(new RegExp(`^${root}/`, 'i'), '');
 }
-exports.removeroot = removeroot;
-function getfileext(filename) {
+exports.removeRoot = removeRoot;
+function getFileExt(filename) {
     let ext = path.extname(filename).replace(/\.(.*)/, '$1');
     return ext ? ext : undefined;
 }
-exports.getfileext = getfileext;
+exports.getFileExt = getFileExt;
 function read(filepath) {
     return __awaiter(this, void 0, void 0, function* () {
         try {

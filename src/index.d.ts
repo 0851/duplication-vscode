@@ -38,10 +38,12 @@ export type IShingles = {
   [hashcode: string]: IToken[]
 };
 
+export type IDuplicationToken = Omit<IToken, 'content' | 'value'>;
+
 export interface IDuplication {
   key: string
-  a: Omit<IToken, 'content' | 'value'>
-  b: Omit<IToken, 'content' | 'value'>
+  a: IDuplicationToken
+  b: IDuplicationToken
 }
 export interface IFORMATS {
   [key: string]: {

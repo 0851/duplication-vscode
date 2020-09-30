@@ -1,11 +1,15 @@
 import { IConnection, DocumentUri, DiagnosticSeverity } from 'vscode-languageserver';
-export const Command = "extension.duplication";
-export const ExecStartCommand = `extension.duplicationstart`;
-export const ExecEndCommand = `extension.duplicationend`;
-export const ShowCommand = `extension.duplicationshow`;
+export const MainCommand = "extension.duplication.exec";
+export const ExecEndCommand = `extension.duplication.end`;
+export const ShowCommand = `extension.duplication.show`;
 export const ShowQuickPickCommand = 'duplication.showQuickPick';
 export const ChangeActiveTextCommand = 'duplication.ChangeActiveTextCommand';
 export const ChangeResultCommand = 'duplication.ChangeResultCommand';
+
+
+export const OpenFileCommand = `extension.duplication.open`;
+export const TreeRefreshCommand = `extension.duplication.treeview.refresh`;
+
 export const ServerId = 'Language Server Duplication';
 export const DebounceWait = 500;
 export class Config {

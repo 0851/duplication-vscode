@@ -2,21 +2,21 @@
 import * as eventemitter3 from 'eventemitter3';
 import { StatusBarItem, window, StatusBarAlignment, ExtensionContext } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
-import { ShowCommand, ExecStartCommand } from '../utils/config';
+import { ShowCommand, MainCommand } from '../utils/config';
 import { IDuplication } from '..';
+import { Loading } from '../utils/loading';
 
 export class StatusBar extends eventemitter3 {
-  loading: number = 0;
   execbar: StatusBarItem;
   resbar: StatusBarItem;
   res: IDuplication[] = [];
   loadingtext: string = '重复分析中...';
-  constructor (public client: LanguageClient, public context: ExtensionContext) {
+  constructor (public client: LanguageClient, public context: ExtensionContext, public loading: Loading) {
     super();
     this.execbar = window.createStatusBarItem(StatusBarAlignment.Right, 2);
     this.execbar.text = '检查重复';
     this.execbar.tooltip = '检查重复';
-    this.execbar.command = ExecStartCommand;
+    this.execbar.command = MainCommand;
     this.resbar = window.createStatusBarItem(StatusBarAlignment.Right, 1);
     this.resbar.text = '';
     this.resbar.command = ShowCommand;
@@ -24,20 +24,20 @@ export class StatusBar extends eventemitter3 {
     this.execbar.show();
   }
   async exec () {
-    if (this.loading > 0) {
+    if (this.loading.ing()) {
       this.ing();
       return;
     }
-    this.loading++;
+    this.loading.start();
     this.execbar.text = `$(loading~spin)${this.loadingtext}`;
     this.execbar.show();
-    this.client.sendNotification(ExecStartCommand);
+    this.client.sendNotification(MainCommand);
   }
   ing () {
     window.showInformationMessage(this.loadingtext);
   }
   changeResult (res: IDuplication[]) {
-    if (this.loading > 0) {
+    if (this.loading.ing()) {
       return;
     }
     this.resbar.text = `${res.length}项重复`;

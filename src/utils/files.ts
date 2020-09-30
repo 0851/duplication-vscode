@@ -1,4 +1,4 @@
-import { read, hasOwnProperty, getfileext } from './index';
+import { read, hasOwnProperty, getFileExt } from './index';
 import * as fs from 'fs';
 import * as globby from 'globby';
 import * as bytes from 'bytes';
@@ -107,8 +107,8 @@ export class FileUtil extends eventemitter3 {
     let allcombine = arrayCombine(this.paths, 2);
     this.combines = allcombine.reduce((res: string[][], item) => {
       let [a, b] = item;
-      let aext = getfileext(a);
-      let bext = getfileext(b);
+      let aext = getFileExt(a);
+      let bext = getFileExt(b);
       if (aext === undefined || bext === undefined) {
         return res;
       }

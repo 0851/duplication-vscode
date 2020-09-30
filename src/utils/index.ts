@@ -2,20 +2,20 @@ import * as fs from 'fs';
 import * as pify from 'pify';
 import * as chokidar from 'chokidar';
 import { Config } from './config';
-import { IFile } from '../index.d';
+import { IFile, IDuplicationToken } from '../index.d';
 import * as path from 'path';
 import {
   performance
 } from 'perf_hooks';
 
-export function removeroot (p: string, root: string | undefined): string {
+export function removeRoot (p: string, root: string | undefined): string {
   if (root === undefined) {
     return p;
   }
   return p.replace(new RegExp(`^${root}/`, 'i'), '');
 }
 
-export function getfileext (filename: string): string | undefined {
+export function getFileExt (filename: string): string | undefined {
   let ext = path.extname(filename).replace(/\.(.*)/, '$1');
   return ext ? ext : undefined;
 }

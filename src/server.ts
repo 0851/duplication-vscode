@@ -5,8 +5,8 @@ import {
 } from 'vscode-languageserver';
 
 import { FileUtil } from './utils/files';
-import { Config, ExecStartCommand, ExecEndCommand, ChangeActiveTextCommand, ChangeResultCommand } from './utils/config';
-import { Provider } from './provides/index';
+import { Config, ExecEndCommand, ChangeActiveTextCommand, ChangeResultCommand, MainCommand } from './utils/config';
+import { Provider } from './provides/diff';
 import debounce from 'lodash-es/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import values from 'lodash-es/values';
@@ -55,7 +55,7 @@ connection.onInitialize(async (params) => {
     }
   }, config.debounceWait));
 
-  connection.onNotification(ExecStartCommand, debounce(async () => {
+  connection.onNotification(MainCommand, debounce(async () => {
     config && await config.changeConfig();
     await files.exec();
     await provider.onChanges();

@@ -1,10 +1,10 @@
 import { FileUtil } from '../utils/files';
 import { Config } from '../utils/config';
-import { IDuplication } from '../index.d';
+import { IDuplication } from '..';
 import { dup, dupall } from '../utils/duplication';
 import { IConnection, Diagnostic, DiagnosticRelatedInformation, Location, Range } from 'vscode-languageserver';
 import keyBy from 'lodash-es/keyBy';
-import { removeroot } from '../utils';
+import { removeRoot } from '../utils';
 
 export class Provider {
   file: FileUtil;
@@ -53,8 +53,7 @@ export class Provider {
             a: next.a,
             b: next.b
           });
-        }
-        if (next.b.filename === filename && next.a.filename !== filename) {
+        } else if (next.b.filename === filename) {
           res.push({
             key: next.key,
             a: next.b,
@@ -86,7 +85,7 @@ export class Provider {
         diagnostic.relatedInformation = [
           DiagnosticRelatedInformation.create(
             Location.create(obj.b.filename, otherRange),
-            `${removeroot(obj.b.filename, this.config.root || '')}`
+            `${removeRoot(obj.b.filename, this.config.root || '')}`
           )
         ];
         diagnostics.push(diagnostic);
