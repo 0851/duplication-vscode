@@ -10,6 +10,7 @@ export class StatusBar extends eventemitter3 {
   execbar: StatusBarItem;
   resbar: StatusBarItem;
   res: IDuplication[] = [];
+  paths: string[] = [];
   loadingtext: string = '重复分析中...';
   constructor (public client: LanguageClient, public context: ExtensionContext, public loading: Loading) {
     super();
@@ -36,7 +37,7 @@ export class StatusBar extends eventemitter3 {
   ing () {
     window.showInformationMessage(this.loadingtext);
   }
-  changeResult (res: IDuplication[]) {
+  changeResult (res: IDuplication[], paths: string[]) {
     if (this.loading.ing()) {
       return;
     }
@@ -47,5 +48,6 @@ export class StatusBar extends eventemitter3 {
     this.execbar.show();
     this.execbar.show();
     this.res = res;
+    this.paths = paths;
   }
 }

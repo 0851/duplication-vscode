@@ -3,7 +3,7 @@ import { FileUtil } from './files';
 import { filterCombine } from './combine';
 import { Config } from './config';
 
-export function dupone (astringtokens: string[], bstringtokens: string[]): { [key: string]: number } {
+export function dupOne (astringtokens: string[], bstringtokens: string[]): { [key: string]: number } {
 
   let m = astringtokens.length;
   let n = bstringtokens.length;
@@ -32,7 +32,7 @@ export function dupone (astringtokens: string[], bstringtokens: string[]): { [ke
   return map;
 }
 
-function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IToken[], maxlen: number, minLine: number): IDuplication[] {
+function maked (map: { [key: string]: number }, atokens: IToken[], btokens: IToken[], maxlen: number, minLine: number): IDuplication[] {
   let res: IDuplication[] = [];
   let keys = Object.keys(map);
   let k = keys.length;
@@ -70,6 +70,7 @@ function makedup (map: { [key: string]: number }, atokens: IToken[], btokens: IT
       let bcontent = bendtoken.content;
       let bstart = bstarttoken.start;
       let bend = bendtoken.end;
+
       let mapkey = `${afilename}_${bfilename}_${astart.pos}_${bstart.pos}_${aend.pos}_${bend.pos}`;
 
       if (resmap[mapkey] === true) {
@@ -109,8 +110,8 @@ function _dup (comb: string[], file: FileUtil, config: Config): IDuplication[] {
   if (!afile || !bfile) {
     return [];
   }
-  let map = dupone(afile.stringtokens, bfile.stringtokens);
-  return makedup(map, afile.tokens, bfile.tokens, config.minTokens, config.minLine);
+  let map = dupOne(afile.stringtokens, bfile.stringtokens);
+  return maked(map, afile.tokens, bfile.tokens, config.minTokens, config.minLine);
 }
 
 
@@ -131,7 +132,7 @@ function sleep (time: number = 100) {
     }, time);
   });
 }
-async function dupeach (combines: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
+async function dupEach (combines: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
   // let allcombs = [...combines];
   // let res: IDuplication[] = [];
   // let actions = [];
@@ -161,13 +162,13 @@ async function dupeach (combines: string[][], file: FileUtil, config: Config): P
 }
 export async function dup (filename: string, file: FileUtil, config: Config): Promise<IDuplication[]> {
   let combs = filterCombine(file.combines, filename);
-  return await dupeach(combs, file, config);
+  return await dupEach(combs, file, config);
 }
 
-export async function dupall (file: FileUtil, config: Config): Promise<IDuplication[]> {
+export async function dupAll (file: FileUtil, config: Config): Promise<IDuplication[]> {
   let combs = file.combines;
-  console.time('dupall');
-  let res = await dupeach(combs, file, config);
-  console.timeEnd('dupall');
+  console.time('dupAll');
+  let res = await dupEach(combs, file, config);
+  console.timeEnd('dupAll');
   return res;
 }

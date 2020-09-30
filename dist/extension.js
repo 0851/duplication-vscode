@@ -46749,14 +46749,14 @@ function onEvent(client, status, tree, loading) {
         console.log('===onDidChangeConfiguration===');
         status.exec();
     });
-    client.onNotification(config_1.ExecEndCommand, (res) => {
+    client.onNotification(config_1.ExecEndCommand, (res, paths) => {
         loading.end();
-        status.changeResult(res);
-        tree.changeResult(res);
+        status.changeResult(res, paths);
+        tree.changeResult(res, paths);
     });
-    client.onNotification(config_1.ChangeResultCommand, (res) => {
-        status.changeResult(res);
-        tree.changeResult(res);
+    client.onNotification(config_1.ChangeResultCommand, (res, paths) => {
+        status.changeResult(res, paths);
+        tree.changeResult(res, paths);
     });
 }
 exports.onEvent = onEvent;
@@ -46846,15 +46846,6 @@ exports.quickPick = quickPick;
 
 "use strict";
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerCommand = void 0;
 const vscode_1 = __webpack_require__(/*! vscode */ "vscode");
@@ -46867,9 +46858,9 @@ function registerCommand(context, status, loading) {
     context.subscriptions.push(vscode_1.commands.registerCommand(config_1.TreeRefreshCommand, () => {
         status.exec();
     }));
-    context.subscriptions.push(vscode_1.commands.registerCommand(config_1.OpenFileCommand, ([uri, token]) => __awaiter(this, void 0, void 0, function* () {
+    context.subscriptions.push(vscode_1.commands.registerCommand(config_1.OpenFileCommand, (uri, token) => {
         quickpick_1.openFile(uri, token);
-    })));
+    }));
     context.subscriptions.push(vscode_1.commands.registerCommand(config_1.ShowCommand, () => {
         if (loading.ing()) {
             status.ing();
@@ -46918,6 +46909,7 @@ class StatusBar extends eventemitter3 {
         this.context = context;
         this.loading = loading;
         this.res = [];
+        this.paths = [];
         this.loadingtext = '重复分析中...';
         this.execbar = vscode_1.window.createStatusBarItem(vscode_1.StatusBarAlignment.Right, 2);
         this.execbar.text = '检查重复';
@@ -46944,7 +46936,7 @@ class StatusBar extends eventemitter3 {
     ing() {
         vscode_1.window.showInformationMessage(this.loadingtext);
     }
-    changeResult(res) {
+    changeResult(res, paths) {
         if (this.loading.ing()) {
             return;
         }
@@ -46955,6 +46947,7 @@ class StatusBar extends eventemitter3 {
         this.execbar.show();
         this.execbar.show();
         this.res = res;
+        this.paths = paths;
     }
 }
 exports.StatusBar = StatusBar;
@@ -47016,6 +47009,7 @@ class NodeDuplicationsProvider {
         this.client = client;
         this.context = context;
         this.res = [];
+        this.paths = [];
         this._onDidChangeTreeData = new vscode_1.EventEmitter();
         this.onDidChangeTreeData = this._onDidChangeTreeData.event;
     }
@@ -47046,12 +47040,11 @@ class Item extends vscode_1.TreeItem {
         this.uri = uri;
         this.token = token;
         this.resourceUri = uri;
-        this.command = {
+        this.command = token ? (command || {
             command: config_1.OpenFileCommand,
             title: '',
             arguments: [uri, token]
-        };
-        // console.log(this.command, '===');
+        }) : undefined;
         this.tooltip = value;
     }
 }
@@ -47067,11 +47060,12 @@ class Tree extends eventemitter3 {
             treeDataProvider: this.provider
         });
     }
-    changeResult(res) {
+    changeResult(res, paths) {
         if (this.loading.ing()) {
             return;
         }
         this.provider.res = res;
+        this.provider.paths = paths;
         this.provider.refresh();
     }
 }

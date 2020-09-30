@@ -70,6 +70,7 @@ function getItems (dups: IDuplication[], root: string = ''): Item[] {
 }
 export class NodeDuplicationsProvider implements TreeDataProvider<Item>{
   res: IDuplication[] = [];
+  paths: string[] = [];
   constructor (public client: LanguageClient, public context: ExtensionContext,) {
   }
   private _onDidChangeTreeData: EventEmitter<Item | undefined> = new EventEmitter<Item | undefined>();
@@ -101,12 +102,11 @@ export class Item extends TreeItem {
   ) {
     super(label, collapsibleState);
     this.resourceUri = uri;
-    this.command = {
+    this.command = token ? (command || {
       command: OpenFileCommand,
       title: '',
       arguments: [uri, token]
-    };
-    // console.log(this.command, '===');
+    }) : undefined;
     this.tooltip = value;
   }
 }
@@ -120,11 +120,12 @@ export class Tree extends eventemitter3 {
       treeDataProvider: this.provider
     });
   }
-  changeResult (res: IDuplication[]) {
+  changeResult (res: IDuplication[], paths: string[]) {
     if (this.loading.ing()) {
       return;
     }
     this.provider.res = res;
+    this.provider.paths = paths;
     this.provider.refresh();
   }
 }

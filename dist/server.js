@@ -5851,6 +5851,40 @@ var WeakMap = Object(_getNative_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_roo
 
 /***/ }),
 
+/***/ "./node_modules/lodash-es/_apply.js":
+/*!******************************************!*\
+  !*** ./node_modules/lodash-es/_apply.js ***!
+  \******************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/**
+ * A faster alternative to `Function#apply`, this function invokes `func`
+ * with the `this` binding of `thisArg` and the arguments of `args`.
+ *
+ * @private
+ * @param {Function} func The function to invoke.
+ * @param {*} thisArg The `this` binding of `func`.
+ * @param {Array} args The arguments to invoke `func` with.
+ * @returns {*} Returns the result of `func`.
+ */
+function apply(func, thisArg, args) {
+  switch (args.length) {
+    case 0: return func.call(thisArg);
+    case 1: return func.call(thisArg, args[0]);
+    case 2: return func.call(thisArg, args[0], args[1]);
+    case 3: return func.call(thisArg, args[0], args[1], args[2]);
+  }
+  return func.apply(thisArg, args);
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (apply);
+
+
+/***/ }),
+
 /***/ "./node_modules/lodash-es/_arrayAggregator.js":
 /*!****************************************************!*\
   !*** ./node_modules/lodash-es/_arrayAggregator.js ***!
@@ -6229,6 +6263,59 @@ __webpack_require__.r(__webpack_exports__);
 var baseEach = Object(_createBaseEach_js__WEBPACK_IMPORTED_MODULE_1__["default"])(_baseForOwn_js__WEBPACK_IMPORTED_MODULE_0__["default"]);
 
 /* harmony default export */ __webpack_exports__["default"] = (baseEach);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_baseFlatten.js":
+/*!************************************************!*\
+  !*** ./node_modules/lodash-es/_baseFlatten.js ***!
+  \************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _arrayPush_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_arrayPush.js */ "./node_modules/lodash-es/_arrayPush.js");
+/* harmony import */ var _isFlattenable_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_isFlattenable.js */ "./node_modules/lodash-es/_isFlattenable.js");
+
+
+
+/**
+ * The base implementation of `_.flatten` with support for restricting flattening.
+ *
+ * @private
+ * @param {Array} array The array to flatten.
+ * @param {number} depth The maximum recursion depth.
+ * @param {boolean} [predicate=isFlattenable] The function invoked per iteration.
+ * @param {boolean} [isStrict] Restrict to values that pass `predicate` checks.
+ * @param {Array} [result=[]] The initial result value.
+ * @returns {Array} Returns the new flattened array.
+ */
+function baseFlatten(array, depth, predicate, isStrict, result) {
+  var index = -1,
+      length = array.length;
+
+  predicate || (predicate = _isFlattenable_js__WEBPACK_IMPORTED_MODULE_1__["default"]);
+  result || (result = []);
+
+  while (++index < length) {
+    var value = array[index];
+    if (depth > 0 && predicate(value)) {
+      if (depth > 1) {
+        // Recursively flatten arrays (susceptible to call stack limits).
+        baseFlatten(value, depth - 1, predicate, isStrict, result);
+      } else {
+        Object(_arrayPush_js__WEBPACK_IMPORTED_MODULE_0__["default"])(result, value);
+      }
+    } else if (!isStrict) {
+      result[result.length] = value;
+    }
+  }
+  return result;
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (baseFlatten);
 
 
 /***/ }),
@@ -6929,6 +7016,43 @@ function baseKeys(object) {
 
 /***/ }),
 
+/***/ "./node_modules/lodash-es/_baseMap.js":
+/*!********************************************!*\
+  !*** ./node_modules/lodash-es/_baseMap.js ***!
+  \********************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _baseEach_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_baseEach.js */ "./node_modules/lodash-es/_baseEach.js");
+/* harmony import */ var _isArrayLike_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./isArrayLike.js */ "./node_modules/lodash-es/isArrayLike.js");
+
+
+
+/**
+ * The base implementation of `_.map` without support for iteratee shorthands.
+ *
+ * @private
+ * @param {Array|Object} collection The collection to iterate over.
+ * @param {Function} iteratee The function invoked per iteration.
+ * @returns {Array} Returns the new mapped array.
+ */
+function baseMap(collection, iteratee) {
+  var index = -1,
+      result = Object(_isArrayLike_js__WEBPACK_IMPORTED_MODULE_1__["default"])(collection) ? Array(collection.length) : [];
+
+  Object(_baseEach_js__WEBPACK_IMPORTED_MODULE_0__["default"])(collection, function(value, key, collection) {
+    result[++index] = iteratee(value, key, collection);
+  });
+  return result;
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (baseMap);
+
+
+/***/ }),
+
 /***/ "./node_modules/lodash-es/_baseMatches.js":
 /*!************************************************!*\
   !*** ./node_modules/lodash-es/_baseMatches.js ***!
@@ -7020,6 +7144,60 @@ function baseMatchesProperty(path, srcValue) {
 
 /***/ }),
 
+/***/ "./node_modules/lodash-es/_baseOrderBy.js":
+/*!************************************************!*\
+  !*** ./node_modules/lodash-es/_baseOrderBy.js ***!
+  \************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _arrayMap_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_arrayMap.js */ "./node_modules/lodash-es/_arrayMap.js");
+/* harmony import */ var _baseIteratee_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_baseIteratee.js */ "./node_modules/lodash-es/_baseIteratee.js");
+/* harmony import */ var _baseMap_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./_baseMap.js */ "./node_modules/lodash-es/_baseMap.js");
+/* harmony import */ var _baseSortBy_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./_baseSortBy.js */ "./node_modules/lodash-es/_baseSortBy.js");
+/* harmony import */ var _baseUnary_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./_baseUnary.js */ "./node_modules/lodash-es/_baseUnary.js");
+/* harmony import */ var _compareMultiple_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./_compareMultiple.js */ "./node_modules/lodash-es/_compareMultiple.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./identity.js */ "./node_modules/lodash-es/identity.js");
+
+
+
+
+
+
+
+
+/**
+ * The base implementation of `_.orderBy` without param guards.
+ *
+ * @private
+ * @param {Array|Object} collection The collection to iterate over.
+ * @param {Function[]|Object[]|string[]} iteratees The iteratees to sort by.
+ * @param {string[]} orders The sort orders of `iteratees`.
+ * @returns {Array} Returns the new sorted array.
+ */
+function baseOrderBy(collection, iteratees, orders) {
+  var index = -1;
+  iteratees = Object(_arrayMap_js__WEBPACK_IMPORTED_MODULE_0__["default"])(iteratees.length ? iteratees : [_identity_js__WEBPACK_IMPORTED_MODULE_6__["default"]], Object(_baseUnary_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_baseIteratee_js__WEBPACK_IMPORTED_MODULE_1__["default"]));
+
+  var result = Object(_baseMap_js__WEBPACK_IMPORTED_MODULE_2__["default"])(collection, function(value, key, collection) {
+    var criteria = Object(_arrayMap_js__WEBPACK_IMPORTED_MODULE_0__["default"])(iteratees, function(iteratee) {
+      return iteratee(value);
+    });
+    return { 'criteria': criteria, 'index': ++index, 'value': value };
+  });
+
+  return Object(_baseSortBy_js__WEBPACK_IMPORTED_MODULE_3__["default"])(result, function(object, other) {
+    return Object(_compareMultiple_js__WEBPACK_IMPORTED_MODULE_5__["default"])(object, other, orders);
+  });
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (baseOrderBy);
+
+
+/***/ }),
+
 /***/ "./node_modules/lodash-es/_baseProperty.js":
 /*!*************************************************!*\
   !*** ./node_modules/lodash-es/_baseProperty.js ***!
@@ -7073,6 +7251,111 @@ function basePropertyDeep(path) {
 }
 
 /* harmony default export */ __webpack_exports__["default"] = (basePropertyDeep);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_baseRest.js":
+/*!*********************************************!*\
+  !*** ./node_modules/lodash-es/_baseRest.js ***!
+  \*********************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./identity.js */ "./node_modules/lodash-es/identity.js");
+/* harmony import */ var _overRest_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_overRest.js */ "./node_modules/lodash-es/_overRest.js");
+/* harmony import */ var _setToString_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./_setToString.js */ "./node_modules/lodash-es/_setToString.js");
+
+
+
+
+/**
+ * The base implementation of `_.rest` which doesn't validate or coerce arguments.
+ *
+ * @private
+ * @param {Function} func The function to apply a rest parameter to.
+ * @param {number} [start=func.length-1] The start position of the rest parameter.
+ * @returns {Function} Returns the new function.
+ */
+function baseRest(func, start) {
+  return Object(_setToString_js__WEBPACK_IMPORTED_MODULE_2__["default"])(Object(_overRest_js__WEBPACK_IMPORTED_MODULE_1__["default"])(func, start, _identity_js__WEBPACK_IMPORTED_MODULE_0__["default"]), func + '');
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (baseRest);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_baseSetToString.js":
+/*!****************************************************!*\
+  !*** ./node_modules/lodash-es/_baseSetToString.js ***!
+  \****************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _constant_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./constant.js */ "./node_modules/lodash-es/constant.js");
+/* harmony import */ var _defineProperty_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_defineProperty.js */ "./node_modules/lodash-es/_defineProperty.js");
+/* harmony import */ var _identity_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./identity.js */ "./node_modules/lodash-es/identity.js");
+
+
+
+
+/**
+ * The base implementation of `setToString` without support for hot loop shorting.
+ *
+ * @private
+ * @param {Function} func The function to modify.
+ * @param {Function} string The `toString` result.
+ * @returns {Function} Returns `func`.
+ */
+var baseSetToString = !_defineProperty_js__WEBPACK_IMPORTED_MODULE_1__["default"] ? _identity_js__WEBPACK_IMPORTED_MODULE_2__["default"] : function(func, string) {
+  return Object(_defineProperty_js__WEBPACK_IMPORTED_MODULE_1__["default"])(func, 'toString', {
+    'configurable': true,
+    'enumerable': false,
+    'value': Object(_constant_js__WEBPACK_IMPORTED_MODULE_0__["default"])(string),
+    'writable': true
+  });
+};
+
+/* harmony default export */ __webpack_exports__["default"] = (baseSetToString);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_baseSortBy.js":
+/*!***********************************************!*\
+  !*** ./node_modules/lodash-es/_baseSortBy.js ***!
+  \***********************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/**
+ * The base implementation of `_.sortBy` which uses `comparer` to define the
+ * sort order of `array` and replaces criteria objects with their corresponding
+ * values.
+ *
+ * @private
+ * @param {Array} array The array to sort.
+ * @param {Function} comparer The function to define sort order.
+ * @returns {Array} Returns `array`.
+ */
+function baseSortBy(array, comparer) {
+  var length = array.length;
+
+  array.sort(comparer);
+  while (length--) {
+    array[length] = array[length].value;
+  }
+  return array;
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (baseSortBy);
 
 
 /***/ }),
@@ -7284,6 +7567,119 @@ function castPath(value, object) {
 }
 
 /* harmony default export */ __webpack_exports__["default"] = (castPath);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_compareAscending.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/lodash-es/_compareAscending.js ***!
+  \*****************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _isSymbol_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./isSymbol.js */ "./node_modules/lodash-es/isSymbol.js");
+
+
+/**
+ * Compares values to sort them in ascending order.
+ *
+ * @private
+ * @param {*} value The value to compare.
+ * @param {*} other The other value to compare.
+ * @returns {number} Returns the sort order indicator for `value`.
+ */
+function compareAscending(value, other) {
+  if (value !== other) {
+    var valIsDefined = value !== undefined,
+        valIsNull = value === null,
+        valIsReflexive = value === value,
+        valIsSymbol = Object(_isSymbol_js__WEBPACK_IMPORTED_MODULE_0__["default"])(value);
+
+    var othIsDefined = other !== undefined,
+        othIsNull = other === null,
+        othIsReflexive = other === other,
+        othIsSymbol = Object(_isSymbol_js__WEBPACK_IMPORTED_MODULE_0__["default"])(other);
+
+    if ((!othIsNull && !othIsSymbol && !valIsSymbol && value > other) ||
+        (valIsSymbol && othIsDefined && othIsReflexive && !othIsNull && !othIsSymbol) ||
+        (valIsNull && othIsDefined && othIsReflexive) ||
+        (!valIsDefined && othIsReflexive) ||
+        !valIsReflexive) {
+      return 1;
+    }
+    if ((!valIsNull && !valIsSymbol && !othIsSymbol && value < other) ||
+        (othIsSymbol && valIsDefined && valIsReflexive && !valIsNull && !valIsSymbol) ||
+        (othIsNull && valIsDefined && valIsReflexive) ||
+        (!othIsDefined && valIsReflexive) ||
+        !othIsReflexive) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (compareAscending);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_compareMultiple.js":
+/*!****************************************************!*\
+  !*** ./node_modules/lodash-es/_compareMultiple.js ***!
+  \****************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _compareAscending_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_compareAscending.js */ "./node_modules/lodash-es/_compareAscending.js");
+
+
+/**
+ * Used by `_.orderBy` to compare multiple properties of a value to another
+ * and stable sort them.
+ *
+ * If `orders` is unspecified, all values are sorted in ascending order. Otherwise,
+ * specify an order of "desc" for descending or "asc" for ascending sort order
+ * of corresponding values.
+ *
+ * @private
+ * @param {Object} object The object to compare.
+ * @param {Object} other The other object to compare.
+ * @param {boolean[]|string[]} orders The order to sort by for each property.
+ * @returns {number} Returns the sort order indicator for `object`.
+ */
+function compareMultiple(object, other, orders) {
+  var index = -1,
+      objCriteria = object.criteria,
+      othCriteria = other.criteria,
+      length = objCriteria.length,
+      ordersLength = orders.length;
+
+  while (++index < length) {
+    var result = Object(_compareAscending_js__WEBPACK_IMPORTED_MODULE_0__["default"])(objCriteria[index], othCriteria[index]);
+    if (result) {
+      if (index >= ordersLength) {
+        return result;
+      }
+      var order = orders[index];
+      return result * (order == 'desc' ? -1 : 1);
+    }
+  }
+  // Fixes an `Array#sort` bug in the JS engine embedded in Adobe applications
+  // that causes it, under certain circumstances, to provide the same value for
+  // `object` and `other`. See https://github.com/jashkenas/underscore/pull/1247
+  // for more details.
+  //
+  // This also ensures a stable sort in V8 and other engines.
+  // See https://bugs.chromium.org/p/v8/issues/detail?id=90 for more details.
+  return object.index - other.index;
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (compareMultiple);
 
 
 /***/ }),
@@ -8386,6 +8782,42 @@ function hashSet(key, value) {
 
 /***/ }),
 
+/***/ "./node_modules/lodash-es/_isFlattenable.js":
+/*!**************************************************!*\
+  !*** ./node_modules/lodash-es/_isFlattenable.js ***!
+  \**************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _Symbol_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_Symbol.js */ "./node_modules/lodash-es/_Symbol.js");
+/* harmony import */ var _isArguments_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./isArguments.js */ "./node_modules/lodash-es/isArguments.js");
+/* harmony import */ var _isArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./isArray.js */ "./node_modules/lodash-es/isArray.js");
+
+
+
+
+/** Built-in value references. */
+var spreadableSymbol = _Symbol_js__WEBPACK_IMPORTED_MODULE_0__["default"] ? _Symbol_js__WEBPACK_IMPORTED_MODULE_0__["default"].isConcatSpreadable : undefined;
+
+/**
+ * Checks if `value` is a flattenable `arguments` object or array.
+ *
+ * @private
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is flattenable, else `false`.
+ */
+function isFlattenable(value) {
+  return Object(_isArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(value) || Object(_isArguments_js__WEBPACK_IMPORTED_MODULE_1__["default"])(value) ||
+    !!(spreadableSymbol && value && value[spreadableSymbol]);
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (isFlattenable);
+
+
+/***/ }),
+
 /***/ "./node_modules/lodash-es/_isIndex.js":
 /*!********************************************!*\
   !*** ./node_modules/lodash-es/_isIndex.js ***!
@@ -8420,6 +8852,53 @@ function isIndex(value, length) {
 }
 
 /* harmony default export */ __webpack_exports__["default"] = (isIndex);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_isIterateeCall.js":
+/*!***************************************************!*\
+  !*** ./node_modules/lodash-es/_isIterateeCall.js ***!
+  \***************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _eq_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./eq.js */ "./node_modules/lodash-es/eq.js");
+/* harmony import */ var _isArrayLike_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./isArrayLike.js */ "./node_modules/lodash-es/isArrayLike.js");
+/* harmony import */ var _isIndex_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./_isIndex.js */ "./node_modules/lodash-es/_isIndex.js");
+/* harmony import */ var _isObject_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./isObject.js */ "./node_modules/lodash-es/isObject.js");
+
+
+
+
+
+/**
+ * Checks if the given arguments are from an iteratee call.
+ *
+ * @private
+ * @param {*} value The potential iteratee value argument.
+ * @param {*} index The potential iteratee index or key argument.
+ * @param {*} object The potential iteratee object argument.
+ * @returns {boolean} Returns `true` if the arguments are from an iteratee call,
+ *  else `false`.
+ */
+function isIterateeCall(value, index, object) {
+  if (!Object(_isObject_js__WEBPACK_IMPORTED_MODULE_3__["default"])(object)) {
+    return false;
+  }
+  var type = typeof index;
+  if (type == 'number'
+        ? (Object(_isArrayLike_js__WEBPACK_IMPORTED_MODULE_1__["default"])(object) && Object(_isIndex_js__WEBPACK_IMPORTED_MODULE_2__["default"])(index, object.length))
+        : (type == 'string' && index in object)
+      ) {
+    return Object(_eq_js__WEBPACK_IMPORTED_MODULE_0__["default"])(object[index], value);
+  }
+  return false;
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (isIterateeCall);
 
 
 /***/ }),
@@ -9185,6 +9664,56 @@ function overArg(func, transform) {
 
 /***/ }),
 
+/***/ "./node_modules/lodash-es/_overRest.js":
+/*!*********************************************!*\
+  !*** ./node_modules/lodash-es/_overRest.js ***!
+  \*********************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _apply_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_apply.js */ "./node_modules/lodash-es/_apply.js");
+
+
+/* Built-in method references for those with the same name as other `lodash` methods. */
+var nativeMax = Math.max;
+
+/**
+ * A specialized version of `baseRest` which transforms the rest array.
+ *
+ * @private
+ * @param {Function} func The function to apply a rest parameter to.
+ * @param {number} [start=func.length-1] The start position of the rest parameter.
+ * @param {Function} transform The rest array transform.
+ * @returns {Function} Returns the new function.
+ */
+function overRest(func, start, transform) {
+  start = nativeMax(start === undefined ? (func.length - 1) : start, 0);
+  return function() {
+    var args = arguments,
+        index = -1,
+        length = nativeMax(args.length - start, 0),
+        array = Array(length);
+
+    while (++index < length) {
+      array[index] = args[start + index];
+    }
+    index = -1;
+    var otherArgs = Array(start + 1);
+    while (++index < start) {
+      otherArgs[index] = args[index];
+    }
+    otherArgs[start] = transform(array);
+    return Object(_apply_js__WEBPACK_IMPORTED_MODULE_0__["default"])(func, this, otherArgs);
+  };
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (overRest);
+
+
+/***/ }),
+
 /***/ "./node_modules/lodash-es/_root.js":
 /*!*****************************************!*\
   !*** ./node_modules/lodash-es/_root.js ***!
@@ -9294,6 +9823,85 @@ function setToArray(set) {
 }
 
 /* harmony default export */ __webpack_exports__["default"] = (setToArray);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_setToString.js":
+/*!************************************************!*\
+  !*** ./node_modules/lodash-es/_setToString.js ***!
+  \************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _baseSetToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_baseSetToString.js */ "./node_modules/lodash-es/_baseSetToString.js");
+/* harmony import */ var _shortOut_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_shortOut.js */ "./node_modules/lodash-es/_shortOut.js");
+
+
+
+/**
+ * Sets the `toString` method of `func` to return `string`.
+ *
+ * @private
+ * @param {Function} func The function to modify.
+ * @param {Function} string The `toString` result.
+ * @returns {Function} Returns `func`.
+ */
+var setToString = Object(_shortOut_js__WEBPACK_IMPORTED_MODULE_1__["default"])(_baseSetToString_js__WEBPACK_IMPORTED_MODULE_0__["default"]);
+
+/* harmony default export */ __webpack_exports__["default"] = (setToString);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/_shortOut.js":
+/*!*********************************************!*\
+  !*** ./node_modules/lodash-es/_shortOut.js ***!
+  \*********************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/** Used to detect hot functions by number of calls within a span of milliseconds. */
+var HOT_COUNT = 800,
+    HOT_SPAN = 16;
+
+/* Built-in method references for those with the same name as other `lodash` methods. */
+var nativeNow = Date.now;
+
+/**
+ * Creates a function that'll short out and invoke `identity` instead
+ * of `func` when it's called `HOT_COUNT` or more times in `HOT_SPAN`
+ * milliseconds.
+ *
+ * @private
+ * @param {Function} func The function to restrict.
+ * @returns {Function} Returns the new shortable function.
+ */
+function shortOut(func) {
+  var count = 0,
+      lastCalled = 0;
+
+  return function() {
+    var stamp = nativeNow(),
+        remaining = HOT_SPAN - (stamp - lastCalled);
+
+    lastCalled = stamp;
+    if (remaining > 0) {
+      if (++count >= HOT_COUNT) {
+        return arguments[0];
+      }
+    } else {
+      count = 0;
+    }
+    return func.apply(undefined, arguments);
+  };
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (shortOut);
 
 
 /***/ }),
@@ -9573,6 +10181,45 @@ function toSource(func) {
 }
 
 /* harmony default export */ __webpack_exports__["default"] = (toSource);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/constant.js":
+/*!********************************************!*\
+  !*** ./node_modules/lodash-es/constant.js ***!
+  \********************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/**
+ * Creates a function that returns `value`.
+ *
+ * @static
+ * @memberOf _
+ * @since 2.4.0
+ * @category Util
+ * @param {*} value The value to return from the new function.
+ * @returns {Function} Returns the new constant function.
+ * @example
+ *
+ * var objects = _.times(2, _.constant({ 'a': 1 }));
+ *
+ * console.log(objects);
+ * // => [{ 'a': 1 }, { 'a': 1 }]
+ *
+ * console.log(objects[0] === objects[1]);
+ * // => true
+ */
+function constant(value) {
+  return function() {
+    return value;
+  };
+}
+
+/* harmony default export */ __webpack_exports__["default"] = (constant);
 
 
 /***/ }),
@@ -10702,6 +11349,71 @@ function property(path) {
 }
 
 /* harmony default export */ __webpack_exports__["default"] = (property);
+
+
+/***/ }),
+
+/***/ "./node_modules/lodash-es/sortBy.js":
+/*!******************************************!*\
+  !*** ./node_modules/lodash-es/sortBy.js ***!
+  \******************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _baseFlatten_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./_baseFlatten.js */ "./node_modules/lodash-es/_baseFlatten.js");
+/* harmony import */ var _baseOrderBy_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./_baseOrderBy.js */ "./node_modules/lodash-es/_baseOrderBy.js");
+/* harmony import */ var _baseRest_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./_baseRest.js */ "./node_modules/lodash-es/_baseRest.js");
+/* harmony import */ var _isIterateeCall_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./_isIterateeCall.js */ "./node_modules/lodash-es/_isIterateeCall.js");
+
+
+
+
+
+/**
+ * Creates an array of elements, sorted in ascending order by the results of
+ * running each element in a collection thru each iteratee. This method
+ * performs a stable sort, that is, it preserves the original sort order of
+ * equal elements. The iteratees are invoked with one argument: (value).
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Collection
+ * @param {Array|Object} collection The collection to iterate over.
+ * @param {...(Function|Function[])} [iteratees=[_.identity]]
+ *  The iteratees to sort by.
+ * @returns {Array} Returns the new sorted array.
+ * @example
+ *
+ * var users = [
+ *   { 'user': 'fred',   'age': 48 },
+ *   { 'user': 'barney', 'age': 36 },
+ *   { 'user': 'fred',   'age': 40 },
+ *   { 'user': 'barney', 'age': 34 }
+ * ];
+ *
+ * _.sortBy(users, [function(o) { return o.user; }]);
+ * // => objects for [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 40]]
+ *
+ * _.sortBy(users, ['user', 'age']);
+ * // => objects for [['barney', 34], ['barney', 36], ['fred', 40], ['fred', 48]]
+ */
+var sortBy = Object(_baseRest_js__WEBPACK_IMPORTED_MODULE_2__["default"])(function(collection, iteratees) {
+  if (collection == null) {
+    return [];
+  }
+  var length = iteratees.length;
+  if (length > 1 && Object(_isIterateeCall_js__WEBPACK_IMPORTED_MODULE_3__["default"])(collection, iteratees[0], iteratees[1])) {
+    iteratees = [];
+  } else if (length > 2 && Object(_isIterateeCall_js__WEBPACK_IMPORTED_MODULE_3__["default"])(iteratees[0], iteratees[1], iteratees[2])) {
+    iteratees = [iteratees[0]];
+  }
+  return Object(_baseOrderBy_js__WEBPACK_IMPORTED_MODULE_1__["default"])(collection, Object(_baseFlatten_js__WEBPACK_IMPORTED_MODULE_0__["default"])(iteratees, 1), []);
+});
+
+/* harmony default export */ __webpack_exports__["default"] = (sortBy);
 
 
 /***/ }),
@@ -21828,6 +22540,8 @@ const duplication_1 = __webpack_require__(/*! ../utils/duplication */ "./src/uti
 const vscode_languageserver_1 = __webpack_require__(/*! vscode-languageserver */ "./node_modules/vscode-languageserver/lib/main.js");
 const keyBy_1 = __webpack_require__(/*! lodash-es/keyBy */ "./node_modules/lodash-es/keyBy.js");
 const utils_1 = __webpack_require__(/*! ../utils */ "./src/utils/index.ts");
+const values_1 = __webpack_require__(/*! lodash-es/values */ "./node_modules/lodash-es/values.js");
+const sortBy_1 = __webpack_require__(/*! lodash-es/sortBy */ "./node_modules/lodash-es/sortBy.js");
 class Provider {
     constructor(context, file, config) {
         this.context = context;
@@ -21837,8 +22551,14 @@ class Provider {
         this.config = config;
         this.file = file;
     }
-    cleardiff(filename) {
+    diffsValues() {
+        let res = values_1.default(this.diffs);
+        res = sortBy_1.default(res, (o) => { return o.a.filename; });
+        return res;
+    }
+    clearDiff(filename) {
         let keys = Object.keys(this.diffs);
+        keys.sort();
         this.diffs = keys.reduce((res = {}, key) => {
             if (key.indexOf(filename) < 0) {
                 res[key] = this.diffs[key];
@@ -21846,8 +22566,27 @@ class Provider {
             return res;
         }, {});
     }
-    filterdiff() {
+    findDiff(diff, filename) {
+        let res = diff.reduce((res, next) => {
+            if (next.a.filename === filename) {
+                res.push({
+                    a: next.a,
+                    b: next.b
+                });
+            }
+            else if (next.b.filename === filename) {
+                res.push({
+                    a: next.b,
+                    b: next.a
+                });
+            }
+            return res;
+        }, []);
+        return res;
+    }
+    filterDiff() {
         let keys = Object.keys(this.diffs);
+        keys.sort();
         this.diffs = keys.reduce((res = {}, key) => {
             let find = this.file.paths.find((path) => {
                 return key.indexOf(path) > -1;
@@ -21864,36 +22603,20 @@ class Provider {
             if (!this.config.root) {
                 return [];
             }
-            let diff = yield duplication_1.dupall(this.file, this.config);
+            let diff = yield duplication_1.dupAll(this.file, this.config);
             this.diffs = keyBy_1.default(diff, 'key');
-            this.filterdiff();
+            this.filterDiff();
             console.time('changes');
             for (let index = 0; index < p.length; index++) {
                 const filename = p[index];
-                let find = diff.reduce((res, next) => {
-                    if (next.a.filename === filename) {
-                        res.push({
-                            key: next.key,
-                            a: next.a,
-                            b: next.b
-                        });
-                    }
-                    else if (next.b.filename === filename) {
-                        res.push({
-                            key: next.key,
-                            a: next.b,
-                            b: next.a
-                        });
-                    }
-                    return res;
-                }, []);
-                this.setdiagnostics(filename, find);
+                let find = this.findDiff(diff, filename);
+                this.setDiagnostics(filename, find);
             }
             console.timeEnd('changes');
             return diff;
         });
     }
-    setdiagnostics(filename, diff) {
+    setDiagnostics(filename, diff) {
         let diagnostics = [];
         this.context.sendDiagnostics({
             uri: filename,
@@ -21921,14 +22644,15 @@ class Provider {
     onChange(filename) {
         return __awaiter(this, void 0, void 0, function* () {
             console.time(`change ${filename}`);
-            this.cleardiff(filename);
+            this.clearDiff(filename);
             let diff = yield duplication_1.dup(filename, this.file, this.config);
             let diffs = keyBy_1.default(diff, 'key');
             Object.assign(this.diffs, diffs);
-            this.filterdiff();
-            this.setdiagnostics(filename, diff);
+            this.filterDiff();
+            let res = this.findDiff(diff, filename);
+            this.setDiagnostics(filename, res);
             console.timeEnd(`change ${filename}`);
-            return diff;
+            return res;
         });
     }
 }
@@ -21962,7 +22686,6 @@ const config_1 = __webpack_require__(/*! ./utils/config */ "./src/utils/config.t
 const diff_1 = __webpack_require__(/*! ./provides/diff */ "./src/provides/diff.ts");
 const debounce_1 = __webpack_require__(/*! lodash-es/debounce */ "./node_modules/lodash-es/debounce.js");
 const vscode_languageserver_textdocument_1 = __webpack_require__(/*! vscode-languageserver-textdocument */ "./node_modules/vscode-languageserver-textdocument/lib/esm/main.js");
-const values_1 = __webpack_require__(/*! lodash-es/values */ "./node_modules/lodash-es/values.js");
 const connection = vscode_languageserver_1.createConnection(vscode_languageserver_1.ProposedFeatures.all);
 const documents = new vscode_languageserver_1.TextDocuments(vscode_languageserver_textdocument_1.TextDocument);
 connection.onInitialize((params) => __awaiter(void 0, void 0, void 0, function* () {
@@ -21997,14 +22720,14 @@ connection.onInitialize((params) => __awaiter(void 0, void 0, void 0, function* 
             connection.console.log(`File Changed ${filename} ${type}`);
             yield files.update(type, filename);
             yield provider.onChange(filename);
-            connection.sendNotification(config_1.ChangeResultCommand, [values_1.default(provider.diffs)]);
+            connection.sendNotification(config_1.ChangeResultCommand, [provider.diffsValues(), files.paths]);
         }
     }), config.debounceWait));
     connection.onNotification(config_1.MainCommand, debounce_1.default(() => __awaiter(void 0, void 0, void 0, function* () {
         config && (yield config.changeConfig());
         yield files.exec();
         yield provider.onChanges();
-        connection.sendNotification(config_1.ExecEndCommand, [values_1.default(provider.diffs)]);
+        connection.sendNotification(config_1.ExecEndCommand, [provider.diffsValues(), files.paths]);
     }), config.debounceWait));
     let changeFn = (type, filename, content) => __awaiter(void 0, void 0, void 0, function* () {
         if (!filename || files.paths.indexOf(filename) < 0) {
@@ -22015,7 +22738,7 @@ connection.onInitialize((params) => __awaiter(void 0, void 0, void 0, function* 
             yield files.put(filename, { content: content });
         }
         yield provider.onChange(filename);
-        connection.sendNotification(config_1.ChangeResultCommand, [values_1.default(provider.diffs)]);
+        connection.sendNotification(config_1.ChangeResultCommand, [provider.diffsValues(), files.paths]);
     });
     documents.onDidChangeContent(debounce_1.default((event) => __awaiter(void 0, void 0, void 0, function* () {
         let content = event.document.getText();
@@ -22113,13 +22836,9 @@ function filterCombine(groups, filepath) {
     let res = [];
     for (let index = 0; index < groups.length; index++) {
         const element = groups[index];
-        if (element[0] === filepath) {
+        if (element[0] === filepath || element[1] === filepath) {
             let [e, b] = element;
             res.push([e, b]);
-        }
-        else if (element[1] === filepath) {
-            let [e, b] = element;
-            res.push([b, e]);
         }
     }
     return res;
@@ -22246,9 +22965,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dupall = exports.dup = exports.dupone = void 0;
+exports.dupAll = exports.dup = exports.dupOne = void 0;
 const combine_1 = __webpack_require__(/*! ./combine */ "./src/utils/combine.ts");
-function dupone(astringtokens, bstringtokens) {
+function dupOne(astringtokens, bstringtokens) {
     let m = astringtokens.length;
     let n = bstringtokens.length;
     let map = {};
@@ -22274,8 +22993,8 @@ function dupone(astringtokens, bstringtokens) {
     }
     return map;
 }
-exports.dupone = dupone;
-function makedup(map, atokens, btokens, maxlen, minLine) {
+exports.dupOne = dupOne;
+function maked(map, atokens, btokens, maxlen, minLine) {
     let res = [];
     let keys = Object.keys(map);
     let k = keys.length;
@@ -22343,8 +23062,8 @@ function _dup(comb, file, config) {
     if (!afile || !bfile) {
         return [];
     }
-    let map = dupone(afile.stringtokens, bfile.stringtokens);
-    return makedup(map, afile.tokens, bfile.tokens, config.minTokens, config.minLine);
+    let map = dupOne(afile.stringtokens, bfile.stringtokens);
+    return maked(map, afile.tokens, bfile.tokens, config.minTokens, config.minLine);
 }
 function split(combs, file, config) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -22364,7 +23083,7 @@ function sleep(time = 100) {
         }, time);
     });
 }
-function dupeach(combines, file, config) {
+function dupEach(combines, file, config) {
     return __awaiter(this, void 0, void 0, function* () {
         // let allcombs = [...combines];
         // let res: IDuplication[] = [];
@@ -22396,20 +23115,20 @@ function dupeach(combines, file, config) {
 function dup(filename, file, config) {
     return __awaiter(this, void 0, void 0, function* () {
         let combs = combine_1.filterCombine(file.combines, filename);
-        return yield dupeach(combs, file, config);
+        return yield dupEach(combs, file, config);
     });
 }
 exports.dup = dup;
-function dupall(file, config) {
+function dupAll(file, config) {
     return __awaiter(this, void 0, void 0, function* () {
         let combs = file.combines;
-        console.time('dupall');
-        let res = yield dupeach(combs, file, config);
-        console.timeEnd('dupall');
+        console.time('dupAll');
+        let res = yield dupEach(combs, file, config);
+        console.timeEnd('dupAll');
         return res;
     });
 }
-exports.dupall = dupall;
+exports.dupAll = dupAll;
 
 
 /***/ }),
@@ -22535,10 +23254,11 @@ class FileUtil extends eventemitter3 {
             Array.prototype.push.apply(res, this.datas[p].tokens);
             return res;
         }, []);
+        paths.sort();
         this.paths = paths;
         this.tokens = tokens;
         let allcombine = combine_1.arrayCombine(this.paths, 2);
-        this.combines = allcombine.reduce((res, item) => {
+        let combines = allcombine.reduce((res, item) => {
             let [a, b] = item;
             let aext = index_1.getFileExt(a);
             let bext = index_1.getFileExt(b);
@@ -22552,6 +23272,8 @@ class FileUtil extends eventemitter3 {
             }
             return res;
         }, []);
+        this.combines = combines;
+        console.log(this.paths, '======this.paths======');
         // console.log(this.combines, '======this.combines======');
         console.timeEnd('pathGroupGenerator');
     }

@@ -102,10 +102,11 @@ export class FileUtil extends eventemitter3 {
       Array.prototype.push.apply(res, this.datas[p].tokens);
       return res;
     }, []);
+    paths.sort();
     this.paths = paths;
     this.tokens = tokens;
     let allcombine = arrayCombine(this.paths, 2);
-    this.combines = allcombine.reduce((res: string[][], item) => {
+    let combines = allcombine.reduce((res: string[][], item) => {
       let [a, b] = item;
       let aext = getFileExt(a);
       let bext = getFileExt(b);
@@ -119,6 +120,8 @@ export class FileUtil extends eventemitter3 {
       }
       return res;
     }, []);
+    this.combines = combines;
+    console.log(this.paths, '======this.paths======');
     // console.log(this.combines, '======this.combines======');
     console.timeEnd('pathGroupGenerator');
   }

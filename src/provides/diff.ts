@@ -1,11 +1,12 @@
 import { FileUtil } from '../utils/files';
 import { Config } from '../utils/config';
-import { IDuplication } from '..';
-import { dup, dupall } from '../utils/duplication';
+import { IDuplication, IDuplicationToken } from '..';
+import { dup, dupAll } from '../utils/duplication';
 import { IConnection, Diagnostic, DiagnosticRelatedInformation, Location, Range } from 'vscode-languageserver';
 import keyBy from 'lodash-es/keyBy';
 import { removeRoot } from '../utils';
-
+import values from 'lodash-es/values';
+import sortBy from 'lodash-es/sortBy';
 export class Provider {
   file: FileUtil;
   diffs: { [key: string]: IDuplication } = {};
@@ -14,8 +15,14 @@ export class Provider {
     this.config = config;
     this.file = file;
   }
-  cleardiff (filename: string) {
+  diffsValues () {
+    let res = values(this.diffs);
+    res = sortBy(res, (o) => { return o.a.filename; });
+    return res;
+  }
+  clearDiff (filename: string) {
     let keys = Object.keys(this.diffs);
+    keys.sort();
     this.diffs = keys.reduce((res: { [key: string]: IDuplication } = {}, key: string) => {
       if (key.indexOf(filename) < 0) {
         res[key] = this.diffs[key];
@@ -23,8 +30,26 @@ export class Provider {
       return res;
     }, {});
   }
-  filterdiff () {
+  findDiff (diff: IDuplication[], filename: string) {
+    let res = diff.reduce((res: IDuplication[], next) => {
+      if (next.a.filename === filename) {
+        res.push({
+          a: next.a,
+          b: next.b
+        });
+      } else if (next.b.filename === filename) {
+        res.push({
+          a: next.b,
+          b: next.a
+        });
+      }
+      return res;
+    }, []);
+    return res;
+  }
+  filterDiff () {
     let keys = Object.keys(this.diffs);
+    keys.sort();
     this.diffs = keys.reduce((res: { [key: string]: IDuplication } = {}, key: string) => {
       let find = this.file.paths.find((path) => {
         return key.indexOf(path) > -1;
@@ -40,34 +65,19 @@ export class Provider {
     if (!this.config.root) {
       return [];
     }
-    let diff = await dupall(this.file, this.config);
+    let diff = await dupAll(this.file, this.config);
     this.diffs = keyBy(diff, 'key');
-    this.filterdiff();
+    this.filterDiff();
     console.time('changes');
     for (let index = 0; index < p.length; index++) {
       const filename = p[index];
-      let find = diff.reduce((res: IDuplication[], next) => {
-        if (next.a.filename === filename) {
-          res.push({
-            key: next.key,
-            a: next.a,
-            b: next.b
-          });
-        } else if (next.b.filename === filename) {
-          res.push({
-            key: next.key,
-            a: next.b,
-            b: next.a
-          });
-        }
-        return res;
-      }, []);
-      this.setdiagnostics(filename, find);
+      let find = this.findDiff(diff, filename);
+      this.setDiagnostics(filename, find);
     }
     console.timeEnd('changes');
     return diff;
   }
-  setdiagnostics (filename: string, diff: IDuplication[]): void {
+  setDiagnostics (filename: string, diff: IDuplication[]): void {
     let diagnostics: Diagnostic[] = [];
     this.context.sendDiagnostics({
       uri: filename,
@@ -101,13 +111,14 @@ export class Provider {
   }
   async onChange (filename: string): Promise<IDuplication[]> {
     console.time(`change ${filename}`);
-    this.cleardiff(filename);
+    this.clearDiff(filename);
     let diff = await dup(filename, this.file, this.config);
     let diffs = keyBy(diff, 'key');
     Object.assign(this.diffs, diffs);
-    this.filterdiff();
-    this.setdiagnostics(filename, diff);
+    this.filterDiff();
+    let res = this.findDiff(diff, filename);
+    this.setDiagnostics(filename, res);
     console.timeEnd(`change ${filename}`);
-    return diff;
+    return res;
   }
 }

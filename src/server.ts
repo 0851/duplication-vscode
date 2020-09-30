@@ -9,7 +9,6 @@ import { Config, ExecEndCommand, ChangeActiveTextCommand, ChangeResultCommand, M
 import { Provider } from './provides/diff';
 import debounce from 'lodash-es/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import values from 'lodash-es/values';
 
 const connection = createConnection(ProposedFeatures.all);
 
@@ -51,7 +50,7 @@ connection.onInitialize(async (params) => {
       connection.console.log(`File Changed ${filename} ${type}`);
       await files.update(type, filename);
       await provider.onChange(filename);
-      connection.sendNotification(ChangeResultCommand, [values(provider.diffs)]);
+      connection.sendNotification(ChangeResultCommand, [provider.diffsValues(), files.paths]);
     }
   }, config.debounceWait));
 
@@ -59,7 +58,7 @@ connection.onInitialize(async (params) => {
     config && await config.changeConfig();
     await files.exec();
     await provider.onChanges();
-    connection.sendNotification(ExecEndCommand, [values(provider.diffs)]);
+    connection.sendNotification(ExecEndCommand, [provider.diffsValues(), files.paths]);
   }, config.debounceWait));
 
   let changeFn = async (type: string, filename: string, content?: string) => {
@@ -71,7 +70,7 @@ connection.onInitialize(async (params) => {
       await files.put(filename, { content: content });
     }
     await provider.onChange(filename);
-    connection.sendNotification(ChangeResultCommand, [values(provider.diffs)]);
+    connection.sendNotification(ChangeResultCommand, [provider.diffsValues(), files.paths]);
   };
 
   documents.onDidChangeContent(debounce(async (event) => {

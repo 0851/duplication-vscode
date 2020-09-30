@@ -6,12 +6,13 @@ export const ShowQuickPickCommand = 'duplication.showQuickPick';
 export const ChangeActiveTextCommand = 'duplication.ChangeActiveTextCommand';
 export const ChangeResultCommand = 'duplication.ChangeResultCommand';
 
-
 export const OpenFileCommand = `extension.duplication.open`;
 export const TreeRefreshCommand = `extension.duplication.treeview.refresh`;
 
 export const ServerId = 'Language Server Duplication';
+
 export const DebounceWait = 500;
+
 export class Config {
   data: { [key: string]: any } = {};
   constructor (public c: IConnection, public root: DocumentUri | null) {

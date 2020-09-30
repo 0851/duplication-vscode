@@ -1,4 +1,4 @@
-import { ExtensionContext, commands, window, workspace, Uri, Range } from 'vscode';
+import { ExtensionContext, commands, window, workspace, Uri } from 'vscode';
 import { MainCommand, TreeRefreshCommand, ShowCommand, OpenFileCommand } from '../utils/config';
 import { StatusBar } from './statusbar';
 import { Loading } from '../utils/loading';
@@ -15,7 +15,7 @@ export function registerCommand (context: ExtensionContext, status: StatusBar, l
     status.exec();
   }));
 
-  context.subscriptions.push(commands.registerCommand(OpenFileCommand, async ([uri, token]: [Uri, IDuplicationToken]) => {
+  context.subscriptions.push(commands.registerCommand(OpenFileCommand, (uri: Uri, token: IDuplicationToken) => {
     openFile(uri, token);
   }));
 

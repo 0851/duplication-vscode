@@ -17,13 +17,13 @@ export function onEvent (client: LanguageClient, status: StatusBar, tree: Tree, 
     status.exec();
   });
 
-  client.onNotification(ExecEndCommand, (res: IDuplication[]) => {
+  client.onNotification(ExecEndCommand, (res: IDuplication[], paths: string[]) => {
     loading.end();
-    status.changeResult(res);
-    tree.changeResult(res);
+    status.changeResult(res, paths);
+    tree.changeResult(res, paths);
   });
-  client.onNotification(ChangeResultCommand, (res: IDuplication[]) => {
-    status.changeResult(res);
-    tree.changeResult(res);
+  client.onNotification(ChangeResultCommand, (res: IDuplication[], paths: string[]) => {
+    status.changeResult(res, paths);
+    tree.changeResult(res, paths);
   });
 }

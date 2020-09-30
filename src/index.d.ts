@@ -41,7 +41,7 @@ export type IShingles = {
 export type IDuplicationToken = Omit<IToken, 'content' | 'value'>;
 
 export interface IDuplication {
-  key: string
+  // key: string
   a: IDuplicationToken
   b: IDuplicationToken
 }

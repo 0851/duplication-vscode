@@ -39,11 +39,11 @@
 			},
 			{
 				"command": "extension.duplication.treeview.refresh",
-				"title": "Duplication"
-			},
-			{
-				"command": "extension.duplication.open",
-				"title": "Open Duplication File"
+				"title": "Duplication Refresh",
+				"icon": {
+					"light": "resources/light/refresh.svg",
+					"dark": "resources/dark/refresh.svg"
+				}
 			}
 		],
 		"configuration": [

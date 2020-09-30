@@ -65,13 +65,9 @@ export function filterCombine (groups: string[][], filepath: string): string[][]
   let res = [];
   for (let index = 0; index < groups.length; index++) {
     const element = groups[index];
-    if (element[0] === filepath) {
+    if (element[0] === filepath || element[1] === filepath) {
       let [e, b] = element;
       res.push([e, b]);
-    }
-    else if (element[1] === filepath) {
-      let [e, b] = element;
-      res.push([b, e]);
     }
   }
   return res;
