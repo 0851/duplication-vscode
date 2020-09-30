@@ -6,6 +6,17 @@ let string_reg1 = /^'+(?<value>[\s\S]*?)'+/;
 let string_reg2 = /^"+(?<value>[\s\S]*?)"+/;
 let string_reg3 = /^`+(?<value>[\s\S]*?)`+/;
 
+let comment_reg1 = /^\s*\/\/[^\n]*\s*/; //   //
+let comment_reg2 = /^\s*\/\*[\s\S]+?\*\/\s*/;  // /** */
+let comment_reg3 = /^\s*\/\#[\s\S]+?\#\/\s*/; // /# #/
+let comment_reg4 = /^\s*\#[^\n]*\s*/; // #
+let comment_reg5 = /^\s*\-\-[^\n]*\s*/; // --
+let comment_reg6 = /^\s*\<\!\-[\s\S]+?\-\>\s*/; // <!- ->
+let comment_reg7 = /^\s*\|\#[\s\S]+?\#\|\s*/; // |# #|
+let comment_reg8 = /^\s*\'\'\'[\s\S]+?\'\'\'\s*/; // ''' '''
+let comment_reg9 = /^\s*\"\"\"[\s\S]+?\"\"\"\s*/; // """ """
+let comment_reg10 = /^\s*\#\|[\s\S]+?\|\#\s*/; // #| |#
+
 let key_reg = /^[a-zA-Z0-9\$\_][a-zA-Z0-9\_\-\$\.]*/;
 
 let sym_reg = /^[\~\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\=\+\|\;\:\,\.\/\<\>\?]+/;
@@ -88,11 +99,22 @@ class Tokenizer {
     return source;
   }
   next (): IToken | undefined {
-    // 去掉空
-    let empty = this.by_reg(space_reg);
-    if (empty !== undefined) {
+    // 去掉注释,空
+    if (
+      this.by_reg(comment_reg1) !== undefined ||
+      this.by_reg(comment_reg2) !== undefined ||
+      this.by_reg(comment_reg3) !== undefined ||
+      this.by_reg(comment_reg4) !== undefined ||
+      this.by_reg(comment_reg5) !== undefined ||
+      this.by_reg(comment_reg6) !== undefined ||
+      this.by_reg(comment_reg7) !== undefined ||
+      this.by_reg(comment_reg8) !== undefined ||
+      this.by_reg(comment_reg9) !== undefined ||
+      this.by_reg(comment_reg10) !== undefined ||
+      this.by_reg(space_reg) !== undefined
+    ) {
       return undefined;
-    }
+    };
     // 特殊字符
     let sym = this.by_reg(sym_reg);
     if (sym !== undefined && this.tokens.length > 0) {

@@ -46,11 +46,11 @@ export class Config {
       "**/.idea",
       "**/.vscode",
       "**/.git",
-      "**/out",
-      "**/dist",
-      "**/build",
       "**/logs",
-      "**/mock"
+      "**/mock",
+      "dist",
+      "build",
+      "out"
     ];
   }
   get minTokens (): number {
@@ -63,7 +63,7 @@ export class Config {
     return this.data['duplication.debounceWait'] || DebounceWait;
   }
   get maxSize (): string {
-    return this.data['duplication.maxSize'] || '100kb';
+    return this.data['duplication.maxSize'] || '20kb';
   }
   get debug (): boolean {
     return this.data['duplication.debug'] || false;

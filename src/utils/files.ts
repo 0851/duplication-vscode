@@ -5,7 +5,7 @@ import * as bytes from 'bytes';
 import { Config } from './config';
 import * as eventemitter3 from 'eventemitter3';
 import { Tokenizer } from './tokenizer';
-import { IFile, IFileData, IShingles, IToken } from '../index.d';
+import { IFile, IFileData, IShingles } from '../index.d';
 import { arrayCombine } from '../utils/combine';
 import { FileChangeType } from 'vscode-languageserver';
 import { getexts } from './formats';
@@ -15,7 +15,6 @@ export class FileUtil extends eventemitter3 {
   datas: IFileData;
   _paths: Set<string> = new Set();
   paths: string[] = [];
-  tokens: IToken[] = [];
   shingles: IShingles = {};
   combines: string[][] = [];
   constructor (public config: Config) {
@@ -98,14 +97,11 @@ export class FileUtil extends eventemitter3 {
   pathGroupGenerator () {
     console.time('pathGroupGenerator');
     let paths = [...this._paths];
-    let tokens: IToken[] = paths.reduce((res, p) => {
-      Array.prototype.push.apply(res, this.datas[p].tokens);
-      return res;
-    }, []);
     paths.sort();
     this.paths = paths;
-    this.tokens = tokens;
+    let uset = new Set<string>();
     let allcombine = arrayCombine(this.paths, 2);
+    console.log(allcombine.length, 'allcombine.length');
     let combines = allcombine.reduce((res: string[][], item) => {
       let [a, b] = item;
       let aext = getFileExt(a);
@@ -117,11 +113,23 @@ export class FileUtil extends eventemitter3 {
       let exts = getexts(aext);
       if (exts.includes(bext)) {
         res.push(item);
+        uset.add(a);
+        uset.add(b);
       }
       return res;
     }, []);
+
+    // [...uset].forEach((filename: string) => {
+    //   let f = this.datas[filename];
+    //   let tokenizer = new Tokenizer(f.content, filename);
+    //   tokenizer.exec();
+    //   this.datas[filename].stringtokens = tokenizer.stringtokens;
+    //   this.datas[filename].tokens = tokenizer.tokens;
+    // });
+
     this.combines = combines;
-    // console.log(this.paths, '======this.paths======');
+
+    // console.log([...uset], '======paths======');
     // console.log(this.combines, '======this.combines======');
     console.timeEnd('pathGroupGenerator');
   }
@@ -184,6 +192,9 @@ export class FileUtil extends eventemitter3 {
     this._paths.add(filepath);
     let tokenizer = new Tokenizer(f.content, filepath);
     tokenizer.exec();
+    if (tokenizer.stringtokens.length > 500) {
+      console.log(tokenizer.stringtokens.length, filepath);
+    }
     let item = {
       filepath: f.filepath,
       content: f.content,

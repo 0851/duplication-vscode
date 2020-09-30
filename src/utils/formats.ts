@@ -252,7 +252,10 @@ export const FORMATS: IFORMATS = {
     exts: ['md', 'markdown', 'mkd', 'txt'],
   },
   markup: {
-    exts: ['html', 'htm', 'xml', 'xsl', 'xslt', 'svg', 'vue', 'ejs', 'jsp'],
+    exts: ['html', 'htm', 'xml', 'xsl', 'xslt', 'ejs', 'jsp'],
+  },
+  vue: {
+    exts: ['vue']
   },
   matlab: {
     exts: [],
@@ -368,20 +371,14 @@ export const FORMATS: IFORMATS = {
   rust: {
     exts: ['rs'],
   },
-  sas: {
-    exts: ['sas'],
-  },
   sass: {
-    exts: ['sass'],
+    exts: ['sass', 'scss', 'sas'],
   },
   scala: {
     exts: ['scala'],
   },
   scheme: {
     exts: ['scm', 'ss'],
-  },
-  scss: {
-    exts: ['scss'],
   },
   smalltalk: {
     exts: ['st'],

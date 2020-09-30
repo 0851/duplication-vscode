@@ -61,7 +61,7 @@ function getItems (dups: IDuplication[], root: string = ''): Item[] {
     let items = getChildrenItem(dups, root, filename);
     return new Item(
       `${removeRoot(filename, root)} (${items.length})`,
-      TreeItemCollapsibleState.Expanded,
+      TreeItemCollapsibleState.Collapsed,
       filename,
       Uri.parse(filename)
     );

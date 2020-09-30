@@ -64,11 +64,11 @@
 							"**/.idea",
 							"**/.vscode",
 							"**/.git",
-							"**/out",
-							"**/dist",
-							"**/build",
 							"**/logs",
-							"**/mock"
+							"**/mock",
+							"dist",
+							"build",
+							"out"
 						],
 						"items": {
 							"type": "string"
@@ -96,8 +96,8 @@
 					},
 					"duplication.maxSize": {
 						"type": "string",
-						"default": "100kb",
-						"description": "最大文件大小 -> 100Kb",
+						"default": "30kb",
+						"description": "最大文件大小 -> 30kb",
 						"scope": "window"
 					},
 					"duplication.debug": {
