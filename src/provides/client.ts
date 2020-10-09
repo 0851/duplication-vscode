@@ -29,7 +29,7 @@ export function createClient (context: ExtensionContext): LanguageClient {
     outputChannel: outputChannel,
     synchronize: {
       configurationSection: 'duplication',
-      fileEvents: workspace.createFileSystemWatcher('**/*')
+      fileEvents: workspace.createFileSystemWatcher('**')
     }
   };
 

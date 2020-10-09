@@ -34,21 +34,19 @@ connection.onInitialize(async (params) => {
   connection.console.log(`[Init(${process.pid}) ${workspaceFolder}] Started`);
 
   connection.onDidChangeWatchedFiles(debounce(async (_change: DidChangeWatchedFilesParams) => {
-    let created = _change.changes.findIndex((change) => {
-      return change.type === FileChangeType.Created;
-    });
-    if (created) {
-      await files.getpaths();
-    }
     for (let i = 0; i < _change.changes.length; i++) {
       const change = _change.changes[i];
       let filename = Files.uriToFilePath(change.uri) || '';
-      if (files.paths.includes(filename) !== true) {
-        continue;
+      if (FileChangeType.Created === change.type) {
+        await files.read(filename);
+      } else {
+        if (files.paths.includes(filename) !== true) {
+          continue;
+        }
+        let type = change.type;
+        connection.console.log(`File Changed ${filename} ${type}`);
+        await files.update(type, filename);
       }
-      let type = change.type;
-      connection.console.log(`File Changed ${filename} ${type}`);
-      await files.update(type, filename);
       await provider.onChange(filename);
       connection.sendNotification(ChangeResultCommand, [provider.diffsValues(), files.paths]);
     }
