@@ -88,6 +88,12 @@
 						"description": "最小匹配分词 -> 30",
 						"scope": "window"
 					},
+					"duplication.maxTokens": {
+						"type": "number",
+						"default": 500,
+						"description": "单文件最大分词 -> 500",
+						"scope": "window"
+					},
 					"duplication.minLine": {
 						"type": "number",
 						"default": 5,

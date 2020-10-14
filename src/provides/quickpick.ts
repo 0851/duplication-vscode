@@ -4,14 +4,18 @@ import {
   ViewColumn,
   QuickPickItem,
   workspace,
-  Range
+  Range,
+  TextDocumentShowOptions
 } from 'vscode';
 import { IDuplication, IDuplicationToken } from '../index.d';
 import { removeRoot } from '../utils';
 
-export async function openFile (uri: Uri, token?: IDuplicationToken, column?: ViewColumn) {
+export async function openFile (uri: Uri, token?: IDuplicationToken, options?: TextDocumentShowOptions) {
   let opened = await workspace.openTextDocument(uri);
-  let doc = await window.showTextDocument(opened, column);
+  let doc = await window.showTextDocument(opened, {
+    preview: false,
+    ...options
+  });
   if (token) {
     let range = new Range(token.start.line - 1, token.start.col - 1, token.end.line - 1, token.end.col - 1);
     doc.revealRange(range);
@@ -23,8 +27,12 @@ async function showDiff (a: IDuplicationToken, b: IDuplicationToken) {
   let auri = Uri.parse(a.filename);
   let buri = Uri.parse(b.filename);
   let [adoc, bdoc] = await Promise.all([
-    openFile(auri, a, ViewColumn.One),
-    openFile(buri, b, ViewColumn.Two)
+    openFile(auri, a, {
+      viewColumn: ViewColumn.One,
+    }),
+    openFile(buri, b, {
+      viewColumn: ViewColumn.Two,
+    })
   ]);
   // const decoration = window.createTextEditorDecorationType({
   //   backgroundColor: "rgba(255,0,0,0.3)"

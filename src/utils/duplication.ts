@@ -167,8 +167,8 @@ export async function dup (filename: string, file: FileUtil, config: Config): Pr
 
 export async function dupAll (file: FileUtil, config: Config): Promise<IDuplication[]> {
   let combs = file.combines;
-  console.time('dupAll');
+  config.debug === true && console.time('dupAll');
   let res = await dupEach(combs, file, config);
-  console.timeEnd('dupAll');
+  config.debug === true && console.timeEnd('dupAll');
   return res;
 }

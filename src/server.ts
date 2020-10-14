@@ -44,7 +44,7 @@ connection.onInitialize(async (params) => {
           continue;
         }
         let type = change.type;
-        connection.console.log(`File Changed ${filename} ${type}`);
+        config.debug === true && connection.console.log(`File Changed ${filename} ${type}`);
         await files.update(type, filename);
       }
       await provider.onChange(filename);
@@ -63,7 +63,7 @@ connection.onInitialize(async (params) => {
     if (!filename || files.paths.indexOf(filename) < 0) {
       return;
     }
-    connection.console.log(`[${type} changeFn(${process.pid}) ${workspaceFolder}] ${filename}`);
+    config.debug === true && connection.console.log(`[${type} changeFn(${process.pid}) ${workspaceFolder}] ${filename}`);
     if (content) {
       await files.put(filename, { content: content });
     }

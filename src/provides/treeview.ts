@@ -102,11 +102,11 @@ export class Item extends TreeItem {
   ) {
     super(label, collapsibleState);
     this.resourceUri = uri;
-    this.command = token ? (command || {
+    this.command = (command || {
       command: OpenFileCommand,
       title: '',
       arguments: [uri, token]
-    }) : undefined;
+    });
     this.tooltip = value;
   }
 }

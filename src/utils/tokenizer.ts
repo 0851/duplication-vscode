@@ -118,20 +118,23 @@ class Tokenizer {
     ) {
       return undefined;
     };
-    // 特殊字符
-    let sym = this.by_reg(sym_reg);
-    if (sym !== undefined && this.tokens.length > 0) {
-      let endtoken = this.tokens[this.tokens.length - 1];
+    // 特殊字符;
+    let start_loc = this.get_loc();
+    let endtoken = this.tokens[this.tokens.length - 1];
+    let v = this.by_reg(sym_reg);
+    if (v !== undefined && endtoken) {
       this.by_reg(space_reg);
       this.tokens[this.tokens.length - 1] = {
         ...endtoken,
         end: this.get_loc(),
-        value: `${endtoken.value}${sym}`
+        value: `${endtoken.value}${v}`,
+        content: `${endtoken.value}${v}`,
       };
       return undefined;
     }
-    let start_loc = this.get_loc();
-    let v = this.by_reg(string_reg1);
+    if (!v) {
+      v = this.by_reg(string_reg1);
+    }
     if (!v) {
       v = this.by_reg(string_reg2);
     }

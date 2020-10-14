@@ -13,7 +13,6 @@ export function onEvent (client: LanguageClient, status: StatusBar, tree: Tree, 
     client.sendNotification(ChangeActiveTextCommand, [event?.document.uri.path]);
   }, debounceWait));
   workspace.onDidChangeConfiguration(() => {
-    console.log('===onDidChangeConfiguration===');
     status.exec();
   });
 

@@ -26,7 +26,7 @@ export class FileUtil extends eventemitter3 {
     if (!this.config.root) {
       return [];
     }
-    console.time('globby');
+    this.config.debug === true && console.time('globby');
     let paths = await globby(`${this.config.root}/**/*`, {
       dot: true,
       cwd: this.config.root,
@@ -39,7 +39,7 @@ export class FileUtil extends eventemitter3 {
       gitignore: true,
       expandDirectories: true
     });
-    console.timeEnd('globby');
+    this.config.debug === true && console.timeEnd('globby');
     return paths;
   }
   async exec (): Promise<void> {
@@ -51,9 +51,9 @@ export class FileUtil extends eventemitter3 {
     return ((num1 ^ num2).toString(2).match(/1/g) || '').length;
   };
   async reads (filepaths: string[]): Promise<void> {
-    console.time('reads');
+    this.config.debug === true && console.time('reads');
     await Promise.all(filepaths.map((filepath) => this._read(filepath, false)));
-    console.timeEnd('reads');
+    this.config.debug === true && console.timeEnd('reads');
     this.pathGroupGenerator();
   }
   removes (filepaths: string[]): void {
@@ -95,13 +95,13 @@ export class FileUtil extends eventemitter3 {
     this.pathGroupGenerator();
   }
   pathGroupGenerator () {
-    console.time('pathGroupGenerator');
+    this.config.debug === true && console.time('pathGroupGenerator');
     let paths = [...this._paths];
     paths.sort();
     this.paths = paths;
     let uset = new Set<string>();
     let allcombine = arrayCombine(this.paths, 2);
-    console.log(allcombine.length, 'allcombine.length');
+    this.config.debug === true && console.log(allcombine.length, 'allcombine.length');
     let combines = allcombine.reduce((res: string[][], item) => {
       let [a, b] = item;
       let aext = getFileExt(a);
@@ -118,20 +118,8 @@ export class FileUtil extends eventemitter3 {
       }
       return res;
     }, []);
-
-    // [...uset].forEach((filename: string) => {
-    //   let f = this.datas[filename];
-    //   let tokenizer = new Tokenizer(f.content, filename);
-    //   tokenizer.exec();
-    //   this.datas[filename].stringtokens = tokenizer.stringtokens;
-    //   this.datas[filename].tokens = tokenizer.tokens;
-    // });
-
     this.combines = combines;
-
-    // console.log([...uset], '======paths======');
-    // console.log(this.combines, '======this.combines======');
-    console.timeEnd('pathGroupGenerator');
+    this.config.debug === true && console.timeEnd('pathGroupGenerator');
   }
   remove (filepath: string): void {
     this._remove(filepath);
@@ -150,8 +138,9 @@ export class FileUtil extends eventemitter3 {
   async update (event: FileChangeType, filepath: string): Promise<void> {
     if (event === FileChangeType.Deleted) {
       this._remove(filepath, false);
+    } else {
+      await this._read(filepath, false);
     }
-    await this._read(filepath, false);
     this.pathGroupGenerator();
     this.emit('update');
   }
@@ -162,7 +151,7 @@ export class FileUtil extends eventemitter3 {
     const { stats, filepath } = entry;
     const shouldSkip = bytes.parse(stats.size) > bytes.parse(this.config.maxSize);
     if (this.config.debug && shouldSkip) {
-      console.log(`File ${filepath} skipped! Size more then limit (${bytes(stats.size)} > ${this.config.maxSize})`);
+      this.config.debug === true && console.log(`File ${filepath} skipped! Size more then limit (${bytes(stats.size)} > ${this.config.maxSize})`);
     }
     return shouldSkip;
   }
@@ -192,8 +181,8 @@ export class FileUtil extends eventemitter3 {
     this._paths.add(filepath);
     let tokenizer = new Tokenizer(f.content, filepath);
     tokenizer.exec();
-    if (tokenizer.stringtokens.length > 500) {
-      console.log(tokenizer.stringtokens.length, filepath);
+    if (tokenizer.stringtokens.length > this.config.maxTokens) {
+      this.config.debug === true && console.log(tokenizer.stringtokens.length, filepath);
     }
     let item = {
       filepath: f.filepath,

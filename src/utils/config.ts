@@ -23,6 +23,7 @@ export class Config {
     let keys = [
       'duplication.ignore',
       'duplication.minTokens',
+      'duplication.maxTokens',
       'duplication.debounceWait',
       'duplication.maxSize',
       'duplication.debug',
@@ -55,6 +56,9 @@ export class Config {
   }
   get minTokens (): number {
     return this.data['duplication.minTokens'] || 30;
+  }
+  get maxTokens (): number {
+    return this.data['duplication.maxTokens'] || 500;
   }
   get minLine (): number {
     return this.data['duplication.minLine'] || 5;

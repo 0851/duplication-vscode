@@ -68,13 +68,13 @@ export class Provider {
     let diff = await dupAll(this.file, this.config);
     this.diffs = keyBy(diff, 'key');
     this.filterDiff();
-    console.time('changes');
+    this.config.debug === true && console.time('changes');
     for (let index = 0; index < p.length; index++) {
       const filename = p[index];
       let find = this.findDiff(diff, filename);
       this.setDiagnostics(filename, find);
     }
-    console.timeEnd('changes');
+    this.config.debug === true && console.timeEnd('changes');
     return diff;
   }
   setDiagnostics (filename: string, diff: IDuplication[]): void {
@@ -110,7 +110,7 @@ export class Provider {
     });
   }
   async onChange (filename: string): Promise<IDuplication[]> {
-    console.time(`change ${filename}`);
+    this.config.debug === true && console.time(`change ${filename}`);
     this.clearDiff(filename);
     let diff = await dup(filename, this.file, this.config);
     let diffs = keyBy(diff, 'key');
@@ -118,7 +118,7 @@ export class Provider {
     this.filterDiff();
     let res = this.findDiff(diff, filename);
     this.setDiagnostics(filename, res);
-    console.timeEnd(`change ${filename}`);
+    this.config.debug === true && console.timeEnd(`change ${filename}`);
     return res;
   }
 }

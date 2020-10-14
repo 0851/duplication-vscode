@@ -22,10 +22,10 @@ export interface IFile {
 }
 
 export interface IToken {
-  value: string,
   filename: string,
   start: ILoc,
   end: ILoc,
+  value: string,
   content: string
 }
 export interface ILoc {
