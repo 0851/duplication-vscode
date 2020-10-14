@@ -2,7 +2,7 @@
 	"name": "duplication-vscode",
 	"displayName": "duplication-vscode",
 	"description": "检查重复代码",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"publisher": "0851",
 	"engines": {
 		"vscode": "^1.47.0"
