@@ -1,5 +1,6 @@
 import { IConnection, DocumentUri, DiagnosticSeverity } from 'vscode-languageserver';
 export const MainCommand = "extension.duplication.exec";
+export const MainStopCommand = "extension.duplication.exec.stop";
 export const ExecEndCommand = `extension.duplication.end`;
 export const ShowCommand = `extension.duplication.show`;
 export const ShowQuickPickCommand = 'duplication.showQuickPick';
@@ -26,6 +27,7 @@ export class Config {
       'duplication.maxTokens',
       'duplication.debounceWait',
       'duplication.maxSize',
+      'duplication.auto',
       'duplication.debug',
       'duplication.severity'
     ];
@@ -71,6 +73,9 @@ export class Config {
   }
   get debug (): boolean {
     return this.data['duplication.debug'] || false;
+  }
+  get auto (): boolean {
+    return this.data['duplication.auto'] || false;
   }
   get severity (): DiagnosticSeverity {
     return this.data['duplication.severity'] || 2;

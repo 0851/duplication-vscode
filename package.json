@@ -2,7 +2,7 @@
 	"name": "duplication-vscode",
 	"displayName": "duplication-vscode",
 	"description": "检查重复代码",
-	"version": "0.3.0",
+	"version": "0.5.0",
 	"publisher": "0851",
 	"engines": {
 		"vscode": "^1.47.0"
@@ -108,8 +108,14 @@
 					},
 					"duplication.debug": {
 						"type": "boolean",
-						"default": false,
+						"default": true,
 						"description": "debug",
+						"scope": "window"
+					},
+					"duplication.auto": {
+						"type": "boolean",
+						"default": true,
+						"description": "第一次自动执行",
 						"scope": "window"
 					},
 					"duplication.severity": {

@@ -2,7 +2,7 @@
 import * as eventemitter3 from 'eventemitter3';
 import { StatusBarItem, window, StatusBarAlignment, ExtensionContext } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
-import { ShowCommand, MainCommand } from '../utils/config';
+import { ShowCommand, MainCommand,MainStopCommand } from '../utils/config';
 import { IDuplication } from '..';
 import { Loading } from '../utils/loading';
 
@@ -34,8 +34,11 @@ export class StatusBar extends eventemitter3 {
     this.execbar.show();
     this.client.sendNotification(MainCommand);
   }
-  ing () {
-    window.showInformationMessage(this.loadingtext);
+  async ing () {
+    const res = await window.showInformationMessage(this.loadingtext, '终止');
+    if (res === '终止') {
+      this.client.sendNotification(MainStopCommand);
+    }
   }
   changeResult (res: IDuplication[], paths: string[]) {
     if (this.loading.ing()) {

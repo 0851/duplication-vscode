@@ -1,5 +1,5 @@
 
-import { ExtensionContext } from 'vscode';
+import { ExtensionContext, workspace } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
 import { StatusBar } from './provides/statusbar';
 import { Tree } from './provides/treeview';
@@ -24,7 +24,10 @@ export async function activate (context: ExtensionContext) {
   let status = new StatusBar(client, context, loading);
   let tree = new Tree(client, context, loading);
   await client.onReady();
-  status.exec();
+  let auto = workspace.getConfiguration().get<boolean>("duplication.auto");
+  if (auto === true) {
+    status.exec();
+  }
   onEvent(client, status, tree, loading);
   registerCommand(context, status, loading);
 }

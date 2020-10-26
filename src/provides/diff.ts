@@ -1,7 +1,7 @@
 import { FileUtil } from '../utils/files';
 import { Config } from '../utils/config';
-import { IDuplication, IDuplicationToken } from '..';
-import { dup, dupAll } from '../utils/duplication';
+import { IDuplication } from '..';
+import { Dup } from '../utils/duplication';
 import { IConnection, Diagnostic, DiagnosticRelatedInformation, Location, Range } from 'vscode-languageserver';
 import keyBy from 'lodash-es/keyBy';
 import { removeRoot } from '../utils';
@@ -10,6 +10,8 @@ import sortBy from 'lodash-es/sortBy';
 export class Provider {
   file: FileUtil;
   diffs: { [key: string]: IDuplication } = {};
+  dupall: Dup | undefined;
+  dupone: Dup | undefined;
   constructor (public context: IConnection, file: FileUtil, public config: Config) {
     this.context = context;
     this.config = config;
@@ -60,12 +62,18 @@ export class Provider {
       return res;
     }, {});
   }
+  stop () {
+    this.dupall && this.dupall.stop();
+    this.dupone && this.dupone.stop();
+  }
   async onChanges (): Promise<IDuplication[]> {
     let p = this.file.paths;
     if (!this.config.root) {
       return [];
     }
-    let diff = await dupAll(this.file, this.config);
+    this.dupall && this.dupall.stop();
+    this.dupall = new Dup(this.file, this.config);
+    let diff = await this.dupall.run();
     this.diffs = keyBy(diff, 'key');
     this.filterDiff();
     this.config.debug === true && console.time('changes');
@@ -112,7 +120,9 @@ export class Provider {
   async onChange (filename: string): Promise<IDuplication[]> {
     this.config.debug === true && console.time(`change ${filename}`);
     this.clearDiff(filename);
-    let diff = await dup(filename, this.file, this.config);
+    this.dupone && this.dupone.stop();
+    this.dupone = new Dup(this.file, this.config, filename);
+    let diff = await this.dupone.run();
     let diffs = keyBy(diff, 'key');
     Object.assign(this.diffs, diffs);
     this.filterDiff();

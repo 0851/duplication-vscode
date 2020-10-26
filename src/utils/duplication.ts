@@ -101,29 +101,10 @@ function maked (map: { [key: string]: number }, atokens: IToken[], btokens: ITok
   }
   return res;
 }
-function _dup (comb: string[], file: FileUtil, config: Config): IDuplication[] {
-  let afile: IFileToken;
-  let bfile: IFileToken;
-  let datas = file.datas;
-  afile = datas[comb[0]];
-  bfile = datas[comb[1]];
-  if (!afile || !bfile) {
-    return [];
-  }
-  let map = dupOne(afile.stringtokens, bfile.stringtokens);
-  return maked(map, afile.tokens, bfile.tokens, config.minTokens, config.minLine);
-}
 
 
-async function split (combs: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
-  let comb;
-  let res: IDuplication[] = [];
-  while (comb = combs.shift()) {
-    let t = _dup(comb, file, config);
-    Array.prototype.push.apply(res, t);
-  }
-  return res;
-}
+
+
 
 function sleep (time: number = 100) {
   return new Promise((resolve, reject) => {
@@ -132,43 +113,132 @@ function sleep (time: number = 100) {
     }, time);
   });
 }
-async function dupEach (combines: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
-  // let allcombs = [...combines];
-  // let res: IDuplication[] = [];
-  // let actions = [];
-  // while (allcombs.length) {
-  //   let combs = allcombs.splice(0, 10000);
-  //   actions.push((async (combs) => {
-  //     let t = await split(combs, file, maxlen);
-  //     Array.prototype.push.apply(res, t);
-  //   })(combs));
-  // }
-  // await Promise.all(actions);
 
-  let comb;
-  let combs = [...combines];
-  let res: IDuplication[] = [];
-  let count = 0;
-  while (comb = combs.shift()) {
-    let t = _dup(comb, file, config);
-    Array.prototype.push.apply(res, t);
-    count++;
-    if (count > 2000) {
-      count = 0;
-      await sleep(100);
+
+// async function split (combs: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
+//   let comb;
+//   let res: IDuplication[] = [];
+//   while (comb = combs.shift()) {
+//     let t = _dup(comb, file, config);
+//     Array.prototype.push.apply(res, t);
+//   }
+//   return res;
+// }
+// function _dup (comb: string[], file: FileUtil, config: Config): IDuplication[] {
+//   let afile: IFileToken;
+//   let bfile: IFileToken;
+//   let datas = file.datas;
+//   afile = datas[comb[0]];
+//   bfile = datas[comb[1]];
+//   if (!afile || !bfile) {
+//     return [];
+//   }
+//   let map = dupOne(afile.stringtokens, bfile.stringtokens);
+//   return maked(map, afile.tokens, bfile.tokens, config.minTokens, config.minLine);
+// }
+// async function dupEach (combines: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
+
+//   // let allcombs = [...combines];
+//   // let res: IDuplication[] = [];
+//   // let actions = [];
+//   // while (alliums.length) {
+//   //   let combs = allcombs.splice(0, 10000);
+//   //   actions.push((async (combs) => {
+//   //     let t = await split(combs, file, maxlen);
+//   //     Array.prototype.push.apply(res, t);
+//   //   })(combs));
+//   // }
+//   // await Promise.all(actions);
+
+//   let comb;
+//   let combs = [...combines];
+//   let res: IDuplication[] = [];
+//   let count = 0;
+//   while (comb = combs.shift()) {
+//     let t = _dup(comb, file, config);
+//     Array.prototype.push.apply(res, t);
+//     count++;
+//     if (count > 2000) {
+//       count = 0;
+//       await sleep(100);
+//     }
+//   }
+//   return res;
+// }
+// export async function dup (filename: string, file: FileUtil, config: Config): Promise<IDuplication[]> {
+//   let combs = filterCombine(file.combines, filename);
+//   return await dupEach(combs, file, config);
+// }
+// export async function dupAll (file: FileUtil, config: Config): Promise<IDuplication[]> {
+//   let combs = file.combines;
+//   config.debug === true && console.time('dupAll');
+//   let res = await dupEach(combs, file, config);
+//   config.debug === true && console.timeEnd('dupAll');
+//   return res;
+// }
+
+export class Dup {
+  stoped: boolean = false;
+  constructor (public file: FileUtil, public config: Config, public filename?: string) { }
+  async run (): Promise<IDuplication[]> {
+    let combs = this.file.combines;
+    if (this.filename) {
+      combs = filterCombine(combs, this.filename);
     }
+    this.stoped = false;
+    this.config.debug === true && console.time('Dup');
+    let res = await this.each(combs, this.file, this.config);
+    this.config.debug === true && console.timeEnd('Dup');
+    return res;
   }
-  return res;
-}
-export async function dup (filename: string, file: FileUtil, config: Config): Promise<IDuplication[]> {
-  let combs = filterCombine(file.combines, filename);
-  return await dupEach(combs, file, config);
-}
-
-export async function dupAll (file: FileUtil, config: Config): Promise<IDuplication[]> {
-  let combs = file.combines;
-  config.debug === true && console.time('dupAll');
-  let res = await dupEach(combs, file, config);
-  config.debug === true && console.timeEnd('dupAll');
-  return res;
+  stop () {
+    this.stoped = true;
+  }
+  async each (combines: string[][], file: FileUtil, config: Config): Promise<IDuplication[]> {
+    let comb;
+    let combs = [...combines];
+    let res: IDuplication[] = [];
+    let count = 0;
+    // let actions = [];
+    while (comb = combs.shift()) {
+      // actions.push(this.dup(comb, file, config));
+      if (this.stoped === true) {
+        return [];
+      }
+      let ires = this.dup(comb, file, config);
+      Array.prototype.push.apply(res, ires);
+      count++;
+      if (count > 500) {
+        count = 0;
+        await sleep(50);
+      }
+    }
+    return res;
+    // let responses = await Promise.all(actions);
+    // return responses.reduce((res, ires) => {
+    //   Array.prototype.push.apply(res, ires);
+    //   return res;
+    // }, []);
+  }
+  dup (comb: string[], file: FileUtil, config: Config): IDuplication[] {
+    try {
+      let afile: IFileToken;
+      let bfile: IFileToken;
+      let datas = file.datas;
+      afile = datas[comb[0]];
+      bfile = datas[comb[1]];
+      if (!afile || !bfile) {
+        return [];
+      }
+      let map = dupOne(afile.stringtokens, bfile.stringtokens);
+      let res = maked(map, afile.tokens, bfile.tokens, config.minTokens, config.minLine);
+      return res;
+    } catch (error) {
+      return [];
+    }
+    // return new Promise((resolve, reject) => {
+    //   setTimeout(() => {
+    //   }, 0);
+    // });
+  }
 }

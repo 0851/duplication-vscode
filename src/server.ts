@@ -5,7 +5,7 @@ import {
 } from 'vscode-languageserver';
 
 import { FileUtil } from './utils/files';
-import { Config, ExecEndCommand, ChangeActiveTextCommand, ChangeResultCommand, MainCommand } from './utils/config';
+import { Config, ExecEndCommand, ChangeActiveTextCommand, ChangeResultCommand, MainCommand, MainStopCommand } from './utils/config';
 import { Provider } from './provides/diff';
 import debounce from 'lodash-es/debounce';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -81,6 +81,11 @@ connection.onInitialize(async (params) => {
   connection.onNotification(ChangeActiveTextCommand, debounce((filename) => {
     changeFn('ChangeActiveTextCommand', filename);
   }, config.debounceWait));
+
+  connection.onNotification(MainStopCommand, async () => {
+    provider.stop();
+    connection.sendNotification(ExecEndCommand, [[], []]);
+  });
 
   return {
     capabilities: {
