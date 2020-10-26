@@ -2,7 +2,7 @@
 import * as eventemitter3 from 'eventemitter3';
 import { StatusBarItem, window, StatusBarAlignment, ExtensionContext } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
-import { ShowCommand, MainCommand,MainStopCommand } from '../utils/config';
+import { ShowCommand, MainCommand, MainStopCommand } from '../utils/config';
 import { IDuplication } from '..';
 import { Loading } from '../utils/loading';
 
@@ -40,16 +40,22 @@ export class StatusBar extends eventemitter3 {
       this.client.sendNotification(MainStopCommand);
     }
   }
+  end () {
+    this.loading.end();
+    if (this.loading.ing()) {
+      return;
+    }
+    this.execbar.text = '重新检查重复';
+    this.execbar.tooltip = '重新检查重复';
+    this.execbar.show();
+  }
   changeResult (res: IDuplication[], paths: string[]) {
     if (this.loading.ing()) {
       return;
     }
     this.resbar.text = `${res.length}项重复`;
     this.resbar.tooltip = `${res.length}项重复`;
-    this.execbar.text = '重新检查重复';
-    this.execbar.tooltip = '重新检查重复';
-    this.execbar.show();
-    this.execbar.show();
+    this.resbar.show();
     this.res = res;
     this.paths = paths;
   }

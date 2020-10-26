@@ -52,13 +52,6 @@ connection.onInitialize(async (params) => {
     }
   }, config.debounceWait));
 
-  connection.onNotification(MainCommand, debounce(async () => {
-    config && await config.changeConfig();
-    await files.exec();
-    await provider.onChanges();
-    connection.sendNotification(ExecEndCommand, [provider.diffsValues(), files.paths]);
-  }, config.debounceWait));
-
   let changeFn = async (type: string, filename: string, content?: string) => {
     if (!filename || files.paths.indexOf(filename) < 0) {
       return;
@@ -71,15 +64,22 @@ connection.onInitialize(async (params) => {
     connection.sendNotification(ChangeResultCommand, [provider.diffsValues(), files.paths]);
   };
 
+  // 切换tab 触发
+  connection.onNotification(ChangeActiveTextCommand, debounce((filename) => {
+    changeFn('ChangeActiveTextCommand', filename);
+  }, config.debounceWait));
+
   documents.onDidChangeContent(debounce(async (event) => {
     let content = event.document.getText();
     let filename = Files.uriToFilePath(event.document.uri || '') || '';
     changeFn('onDidChangeContent', filename, content);
   }, config.debounceWait));
 
-  // 切换tab 触发
-  connection.onNotification(ChangeActiveTextCommand, debounce((filename) => {
-    changeFn('ChangeActiveTextCommand', filename);
+  connection.onNotification(MainCommand, debounce(async () => {
+    config && await config.changeConfig();
+    await files.exec();
+    await provider.onChanges();
+    connection.sendNotification(ExecEndCommand, [provider.diffsValues(), files.paths]);
   }, config.debounceWait));
 
   connection.onNotification(MainStopCommand, async () => {
